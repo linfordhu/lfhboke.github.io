@@ -7,18 +7,18 @@
   
   <title>Java类加载器原理详解 | lfh&#39;s bokes</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="同样先提出几个问题：  1.Java类加载机制（双亲委派模式）是什么？  2.为什么要使用双亲委派模式？  3.双亲委派模式是否能被破坏？  首先说下类加载器的基本概念：用来加载Java类到Java虚拟机中。类加载器负责读取Java字节代码，并转换成java.lang.Class类的一个实例。 首先上一双亲委派模式图：  作者：lkkwxy链接：https://www.jianshu.com/p/">
+  <meta name="description" content="同样先提出几个问题：  1.Java类加载机制（双亲委派模式）是什么？  2.为什么要使用双亲委派模式？  3.双亲委派模式是否能被破坏？  首先说下类加载器的基本概念：用来加载Java类到Java虚拟机中。类加载器负责读取Java字节代码，并转换成java.lang.Class类的一个实例。 首先上一双亲委派模式图： 白话一点，双亲委派机制就是加载一个类时，首先子类加载器会委托给父类加载器进行试">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Java类加载器原理详解">
 <meta property="og:url" content="https://linfordhu.github.io/lfhboke.github.io/2016/01/02/Java类加载器原理详解/index.html">
 <meta property="og:site_name" content="lfh&#39;s bokes">
-<meta property="og:description" content="同样先提出几个问题：  1.Java类加载机制（双亲委派模式）是什么？  2.为什么要使用双亲委派模式？  3.双亲委派模式是否能被破坏？  首先说下类加载器的基本概念：用来加载Java类到Java虚拟机中。类加载器负责读取Java字节代码，并转换成java.lang.Class类的一个实例。 首先上一双亲委派模式图：  作者：lkkwxy链接：https://www.jianshu.com/p/">
+<meta property="og:description" content="同样先提出几个问题：  1.Java类加载机制（双亲委派模式）是什么？  2.为什么要使用双亲委派模式？  3.双亲委派模式是否能被破坏？  首先说下类加载器的基本概念：用来加载Java类到Java虚拟机中。类加载器负责读取Java字节代码，并转换成java.lang.Class类的一个实例。 首先上一双亲委派模式图： 白话一点，双亲委派机制就是加载一个类时，首先子类加载器会委托给父类加载器进行试">
 <meta property="og:locale" content="default">
 <meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/2016/01/02/Java类加载器原理详解/parentproxy.png">
-<meta property="og:updated_time" content="2016-01-02T07:59:04.905Z">
+<meta property="og:updated_time" content="2016-01-02T08:39:01.217Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Java类加载器原理详解">
-<meta name="twitter:description" content="同样先提出几个问题：  1.Java类加载机制（双亲委派模式）是什么？  2.为什么要使用双亲委派模式？  3.双亲委派模式是否能被破坏？  首先说下类加载器的基本概念：用来加载Java类到Java虚拟机中。类加载器负责读取Java字节代码，并转换成java.lang.Class类的一个实例。 首先上一双亲委派模式图：  作者：lkkwxy链接：https://www.jianshu.com/p/">
+<meta name="twitter:description" content="同样先提出几个问题：  1.Java类加载机制（双亲委派模式）是什么？  2.为什么要使用双亲委派模式？  3.双亲委派模式是否能被破坏？  首先说下类加载器的基本概念：用来加载Java类到Java虚拟机中。类加载器负责读取Java字节代码，并转换成java.lang.Class类的一个实例。 首先上一双亲委派模式图： 白话一点，双亲委派机制就是加载一个类时，首先子类加载器会委托给父类加载器进行试">
 <meta name="twitter:image" content="https://linfordhu.github.io/lfhboke.github.io/2016/01/02/Java类加载器原理详解/parentproxy.png">
   
     <link rel="alternate" href="/lfhboke.github.io/atom.xml" title="lfh&#39;s bokes" type="application/atom+xml">
@@ -98,10 +98,48 @@
 <hr>
 <p>首先说下类加载器的基本概念：用来加载Java类到Java虚拟机中。类加载器负责读取Java字节代码，并转换成java.lang.Class类的一个实例。</p>
 <p>首先上一双亲委派模式图：</p>
-<p><img src="parentproxy.png" alt="双亲委派机制图"></p>
-<p>作者：lkkwxy<br>链接：<a href="https://www.jianshu.com/p/b421cc723da5" target="_blank" rel="noopener">https://www.jianshu.com/p/b421cc723da5</a><br>来源：简书<br>简书著作权归作者所有，任何形式的转载都请联系作者获得授权并注明出处。</p>
-<h4 id="深入理解equals"><a href="#深入理解equals" class="headerlink" title="深入理解equals()"></a>深入理解equals()</h4><p>首先，可能大家看过很多博客说”==”与equals()方法有区别，这是因为像Integer以及String这些类对equals()方法进行了重写。<font color="red">而在Object类中，这两种形式其实是相等的，都比较的是他们的栈内存中存储的内存地址</font>。</p>
-<p>想要实现不同与”==”的比较，必须重写equals()方法，下面看看String的equals()源码：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line">	</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">equals</span><span class="params">(Object anObject)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">		<span class="comment">//判断地址值是否相等</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span> == anObject) &#123;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line"></span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">//判断对象类型是否为String</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (anObject <span class="keyword">instanceof</span> String) &#123;</span><br><span class="line"></span><br><span class="line">            String anotherString = (String)anObject;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">int</span> n = value.length;</span><br><span class="line"></span><br><span class="line">			<span class="comment">//判断长度是否相等</span></span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (n == anotherString.value.length) &#123;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">char</span> v1[] = value;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">char</span> v2[] = anotherString.value;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">int</span> i = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">while</span> (n-- != <span class="number">0</span>) &#123;</span><br><span class="line"></span><br><span class="line">					<span class="comment">//每一个字符都必须相同</span></span><br><span class="line"></span><br><span class="line">                    <span class="keyword">if</span> (v1[i] != v2[i])</span><br><span class="line"></span><br><span class="line">                        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">                    i++;</span><br><span class="line"></span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line"></span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure></p>
+<p><img src="parentproxy.png" alt="双亲委派机制图"><br>白话一点，双亲委派机制就是加载一个类时，首先子类加载器会委托给父类加载器进行试加载，父类加载器若还有父类，那么继续向上委托，若最上层父类加载器不能加载，然后向下开始进行子类加载。</p>
+<p>配合上面描述，先了解一个类。</p>
+<h5 id="ClassLoader"><a href="#ClassLoader" class="headerlink" title="ClassLoader"></a>ClassLoader</h5><p>ClassLoader类是一个抽象类，它定义了类加载器的基本方法</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>说明   </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>getParent()</td>
+<td>返回该类加载器的父类加载器</td>
+</tr>
+<tr>
+<td>loadClass(String name)</td>
+<td>加载名称为name的类，返回的结果是java.lang.Class类的实例。 </td>
+</tr>
+<tr>
+<td>findClass(String name)</td>
+<td>查找名称为name的类，返回的结果是java.lang.Class类的实例。 </td>
+</tr>
+<tr>
+<td>findLoadedClass(String name)</td>
+<td>查找名称为name的已经被加载过的类，返回的结果是java.lang.Class类的实例。</td>
+</tr>
+<tr>
+<td>defineClass(String name,byte[] b,int off,int len)</td>
+<td>把字节数组b中的内容转换成Java类，返回的结果是java.lang.Class类的实例。这个方法被声明为final的。</td>
+</tr>
+</tbody>
+</table>
+<p>其中loadClass方法定义了双亲委派模式机制的运行原理：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">protected</span> Class&lt;?&gt; loadClass(String name, <span class="keyword">boolean</span> resolve)&#123;</span><br><span class="line">    Class c = findLoadedClass(name);</span><br><span class="line">    <span class="keyword">if</span> (c == <span class="keyword">null</span>) &#123;</span><br><span class="line">        <span class="keyword">if</span> (parent != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="comment">//使用父加载器加载此类</span></span><br><span class="line">            c = parent.loadClass(name, <span class="keyword">false</span>);</span><br><span class="line">        &#125; </span><br><span class="line">        <span class="keyword">if</span> (c == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="comment">// 如果父加载器没有成功加载，则自己尝试加载</span></span><br><span class="line">            c = findClass(name);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> c;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>分析到这里，已经解释了什么是双亲委派机制，<font color="red">如果要破坏双亲委派机制该做什么呢？只需要将loadClass()方法重新定义就好了</font>，但不建议如此去做，下面解释一下Java为什么要使用双亲委派机制去加载类。</p>
+<h4 id="双亲委派机制的原因"><a href="#双亲委派机制的原因" class="headerlink" title="双亲委派机制的原因"></a>双亲委派机制的原因</h4><p>首先需要明确两点：</p>
+<p>1.jvm如何认定两个对象同属于一个类型，必须同时满足下面两个条件：</p>
+<p>. 都是用同名的类完成实例化的。<br>. 两个实例各自对应的同名的类的加载器必须是同一个。</p>
+<p>2.所以，为了系统类的安全，类似Object这种核心类，jvm需要保证他们生成的对象都会被认定为同一种类型。</p>
+<p>好了，这两点充分说明，<font color="red">定义此种机制是为了安全，使用户在使用默认加载器的情况下无法改变核心类的加载方式,当然，这句话说得有点偏激，但还是建议不要通过自定义加载器改写loadClass()的方法打破双亲委派模式。</font></p>
+<p>想要实现不同与”==”的比较，必须重写equals()方法，下面看看String的equals()源码：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line">	</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">equals</span><span class="params">(Object anObject)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">		<span class="comment">//判断地址值是否相等</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span> == anObject) &#123;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line"></span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">//判断对象类型是否为String</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (anObject <span class="keyword">instanceof</span> String) &#123;</span><br><span class="line"></span><br><span class="line">            String anotherString = (String)anObject;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">int</span> n = value.length;</span><br><span class="line"></span><br><span class="line">			<span class="comment">//判断长度是否相等</span></span><br><span class="line"></span><br><span class="line">                <span class="keyword">char</span> v2[] = anotherString.value;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">int</span> i = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">while</span> (n-- != <span class="number">0</span>) &#123;</span><br><span class="line"></span><br><span class="line">					<span class="comment">//每一个字符都必须相同</span></span><br><span class="line"></span><br><span class="line">                    <span class="keyword">if</span> (v1[i] != v2[i])</span><br><span class="line"></span><br><span class="line">                        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">                    i++;</span><br><span class="line"></span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line"></span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure></p>
 <h4 id="深入理解hashcode"><a href="#深入理解hashcode" class="headerlink" title="深入理解hashcode()"></a>深入理解hashcode()</h4><p>先了解一下hash函数，是一种算法，就是通过一系列的算法来得到一个值。</p>
 <p>然后引入hash表的概念，通过hash算法得到的hash值存于这张hash表中，hash表就是所有的hash值组成的。</p>
 <p>hashcode()方法就是通过hash函数算出一个值返回，从而进行一系列的数据操作。hashcode的存在主要是为了查找的快捷性，HashCode是用来在散列存储结构中确定对象的存储地址的(后半句说的用hashcode来代表对象就是在hash表中的位置)。</p>
@@ -115,7 +153,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/02/Java类加载器原理详解/" data-id="ciiwtjnfb0001xsudh9p7siyq" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/02/Java类加载器原理详解/" data-id="ciiwuzb0h0000xwudab7tlkmo" class="article-share-link">Share</a>
       
       
     </footer>
