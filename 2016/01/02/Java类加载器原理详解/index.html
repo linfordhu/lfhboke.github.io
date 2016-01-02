@@ -14,12 +14,10 @@
 <meta property="og:site_name" content="lfh&#39;s bokes">
 <meta property="og:description" content="同样先提出几个问题：  1.Java类加载机制（双亲委派模式）是什么？  2.为什么要使用双亲委派模式？  3.双亲委派模式是否能被破坏？  首先说下类加载器的基本概念：用来加载Java类到Java虚拟机中。类加载器负责读取Java字节代码，并转换成java.lang.Class类的一个实例。 首先上一双亲委派模式图： 白话一点，双亲委派机制就是加载一个类时，首先子类加载器会委托给父类加载器进行试">
 <meta property="og:locale" content="default">
-<meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/2016/01/02/Java类加载器原理详解/parentproxy.png">
-<meta property="og:updated_time" content="2016-01-02T08:39:01.217Z">
+<meta property="og:updated_time" content="2016-01-02T09:13:24.021Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Java类加载器原理详解">
 <meta name="twitter:description" content="同样先提出几个问题：  1.Java类加载机制（双亲委派模式）是什么？  2.为什么要使用双亲委派模式？  3.双亲委派模式是否能被破坏？  首先说下类加载器的基本概念：用来加载Java类到Java虚拟机中。类加载器负责读取Java字节代码，并转换成java.lang.Class类的一个实例。 首先上一双亲委派模式图： 白话一点，双亲委派机制就是加载一个类时，首先子类加载器会委托给父类加载器进行试">
-<meta name="twitter:image" content="https://linfordhu.github.io/lfhboke.github.io/2016/01/02/Java类加载器原理详解/parentproxy.png">
   
     <link rel="alternate" href="/lfhboke.github.io/atom.xml" title="lfh&#39;s bokes" type="application/atom+xml">
   
@@ -98,7 +96,7 @@
 <hr>
 <p>首先说下类加载器的基本概念：用来加载Java类到Java虚拟机中。类加载器负责读取Java字节代码，并转换成java.lang.Class类的一个实例。</p>
 <p>首先上一双亲委派模式图：</p>
-<p><img src="parentproxy.png" alt="双亲委派机制图"><br>白话一点，双亲委派机制就是加载一个类时，首先子类加载器会委托给父类加载器进行试加载，父类加载器若还有父类，那么继续向上委托，若最上层父类加载器不能加载，然后向下开始进行子类加载。</p>
+<p><div id="flowchart-0" class="flow-chart"></div><br>白话一点，双亲委派机制就是加载一个类时，首先子类加载器会委托给父类加载器进行试加载，父类加载器若还有父类，那么继续向上委托，若最上层父类加载器不能加载，然后向下开始进行子类加载。</p>
 <p>配合上面描述，先了解一个类。</p>
 <h5 id="ClassLoader"><a href="#ClassLoader" class="headerlink" title="ClassLoader"></a>ClassLoader</h5><p>ClassLoader类是一个抽象类，它定义了类加载器的基本方法</p>
 <table>
@@ -148,12 +146,17 @@
 <h4 id="第二个问题研究"><a href="#第二个问题研究" class="headerlink" title="第二个问题研究"></a>第二个问题研究</h4><p>好了，经过上述几个方面分析，了解到equals()和hashcode()方法的概念和作用。</p>
 <p>现在开始分析，当equals()方法重写时，为什么建议重写hashcode()方法。</p>
 <p>举个例子：Java集合中的Set，此集合为无序，并且其值元素不能重复。为了保证元素不重复，就是通过Object.equals方法来判断。但是，如果没增加一个元素就检查一次，那么当元素很多时，后添加到集合中的元素比较的次数就非常多了。所以，Java采用了哈希表的原理。 哈希算法也称为散列算法，是将数据依特定算法直接指定到一个地址上。初学者可以这样理解，hashCode方法实际上返回的就是对象存储的物理地址（实际可能并不是）。</p>
-<p>这样，当集合要添加新的元素时，先调用这个元素的hashCode方法，就一下子能定位到它应该放置的物理位置。</p>
+<p>这样，当集合要添加新的元素时，先调用这个元素的hashCode方法，就一下子能定位到它应该放置的物理位置。<script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.2.7/raphael.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/flowchart/1.6.5/flowchart.min.js"></script><textarea id="flowchart-0-code" style="display: none">op1=>operation: Bootstrap Class Loader
+op2=>operation: Extension Class Loader
+op3=>operation: System Class Loader
+op4=>operation: User-Defined Class Loader
+
+op4(right)->op3(right)->op2(right)->op1(right)</textarea><textarea id="flowchart-0-options" style="display: none">{"scale":1,"line-width":2,"line-length":50,"text-margin":10,"font-size":12}</textarea><script>  var code = document.getElementById("flowchart-0-code").value;  var options = JSON.parse(decodeURIComponent(document.getElementById("flowchart-0-options").value));  var diagram = flowchart.parse(code);  diagram.drawSVG("flowchart-0", options);</script></p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/02/Java类加载器原理详解/" data-id="ciiwuzb0h0000xwudab7tlkmo" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/02/Java类加载器原理详解/" data-id="ciiww8ni300002oude14el2bb" class="article-share-link">Share</a>
       
       
     </footer>
