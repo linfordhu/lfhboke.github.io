@@ -93,7 +93,68 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2017/04/01/Mybatis（插件）/" data-id="cisos2zl800026kudx0y716qa" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2017/04/01/Mybatis（插件）/" data-id="cisq5qabf0003tsud2qdv966l" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-BlockQueue线程容器" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2016/09/05/BlockQueue线程容器/" class="article-date">
+  <time datetime="2016-09-05T13:25:57.000Z" itemprop="datePublished">2016-09-05</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/lfhboke.github.io/2016/09/05/BlockQueue线程容器/">BlockQueue线程容器</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h3 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h3><p>blockQueue作为线程容器、阻塞队列，多用于生产者、消费者的关系模式中，保障并发编程线程同步，线程池中被用于当作存储任务的队列，还可以保证线程执行的有序性。</p>
+<h3 id="常用方法"><a href="#常用方法" class="headerlink" title="常用方法"></a>常用方法</h3><h4 id="生产"><a href="#生产" class="headerlink" title="生产"></a>生产</h4><ol>
+<li>add(obj)：往队列里面增加一个对象，如果队列没有空间抛出异常，反之返回true。</li>
+<li>offer(obj)：往队列增加一个对象，返回true/false</li>
+<li>put(obj)：往队列增加一个对象，如果没有空间，则会阻塞该线程，直到有空间。<h4 id="消费"><a href="#消费" class="headerlink" title="消费"></a>消费</h4></li>
+<li>poll(time)：取出排在首位的对象，如果在一定时间内没有返回，则会返回null</li>
+<li>take()：取出排在首位的对象，如果队列中没有数据，则会阻塞该线程直到有数据。<h4 id="查询"><a href="#查询" class="headerlink" title="查询"></a>查询</h4></li>
+<li>contains(obj)：查询是否存在某个元素，返回true/false。</li>
+<li>peek()：返回队列头部的元素，无则返回null。<h3 id="特点"><a href="#特点" class="headerlink" title="特点"></a>特点</h3></li>
+<li>容量有限，可以限定队列的长度，如果没有主动显式队列长度的情况下，默认长度为Integer.MAX_VALUE</li>
+<li>内存一致性，遵循happened-before原则，即写操作总是先于后面的读操作。</li>
+<li>因为其继承Collection接口，所以可以使用集合的接口，但某些接口并不保证立即执行，因为其内部维护着内部锁（ReentrantLock），所以只有在获取锁的情况下才会执行对应的代码，以remove()源码为例：<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">remove</span><span class="params">(Object o)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">if</span>(o == <span class="keyword">null</span>) </span><br><span class="line">    	<span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    <span class="keyword">final</span> Object[] items = <span class="keyword">this</span>.lock;</span><br><span class="line">    lock.lock();</span><br><span class="line">    <span class="keyword">try</span>&#123;</span><br><span class="line">    	<span class="keyword">if</span>(count &gt; <span class="number">0</span>) &#123;</span><br><span class="line">        	<span class="keyword">final</span> <span class="keyword">int</span> putIndex = <span class="keyword">this</span>.putIndex;</span><br><span class="line">            <span class="keyword">int</span> i = takeIndex;</span><br><span class="line">            <span class="keyword">do</span>&#123;</span><br><span class="line">            	<span class="keyword">if</span>(o.equals(items[i])) &#123;</span><br><span class="line">                	removeAt(i);</span><br><span class="line">                    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span>(++i == items.length&#123;</span><br><span class="line">                	i = <span class="number">0</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;<span class="keyword">while</span>(i ! = putIndex );</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;<span class="keyword">finally</span>&#123;</span><br><span class="line">    	lock.unlock();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>每次操作都会去获取锁，如果锁被其他操作暂用，没有获取到锁，则只能去排队，所以上面代码并不会立即执行。</p>
+<h3 id="常用分类"><a href="#常用分类" class="headerlink" title="常用分类"></a>常用分类</h3><h4 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h4><p>创建队列时，可以添加fair参数，用于声明内部锁是否是公平锁，公平锁用于决定队列里面的任务是否会按照顺序执行。</p>
+<h5 id="公平锁："><a href="#公平锁：" class="headerlink" title="公平锁："></a>公平锁：</h5><p>显式声明为公平锁的任务执行完全按照队列的顺序执行，新的任务进来会存放在队尾。</p>
+<h5 id="非公平锁："><a href="#非公平锁：" class="headerlink" title="非公平锁："></a>非公平锁：</h5><p>队列里面的任务可以按照顺序执行，但是新的任务可能会与队列争抢CPU资源，不保证队列外的顺序。</p>
+<ol>
+<li>ArrayBlockingQueue，创建固定大小的队列，内部维护一个数组，遵循FIFO原则</li>
+<li>LinkedBlockingQueue，可以自定义队列长度，无指定的情况下默认为Integer.MAX_VALUE，内部维护着一个链表，遵循着FIFO原则</li>
+<li>PriorityBlockingQueue，类似ArrayBlockingQueue，内部维护一个数组，但并不按照FIFO原则，其内部有个compare属性决定队列任务的执行顺序。</li>
+<li>SynchronousQueue，特殊的队列，内部无存储空间维护队列，只有当生产者和消费者同时存在时，才会执行，类似于管道。<h4 id="例子"><a href="#例子" class="headerlink" title="例子"></a>例子</h4></li>
+<li>生产者与消费者案例，一个生产者与多个消费者。<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BlockQueueDemo</span> </span>&#123;</span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">    * 生产者</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">    <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Productor</span> <span class="keyword">implements</span> <span class="title">Runnable</span></span>&#123;</span><br><span class="line">    	<span class="keyword">private</span> BlockingQueue&lt;Integer&gt; blockingQueue = <span class="keyword">new</span> LinkedBlockingDeque();</span><br><span class="line">        Productor(BlockingQueue blockingQueue) &#123;</span><br><span class="line">        	<span class="keyword">this</span>.blockingQueue = blockingQueue;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>&#123;</span><br><span class="line">        	<span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">0</span>;i &lt; <span class="number">100</span>; i++)&#123;</span><br><span class="line">            	<span class="keyword">try</span>&#123;</span><br><span class="line">                	Thread.sleep(<span class="number">200</span>);</span><br><span class="line">                    blockingQueue.put(i);</span><br><span class="line">                    blockingQueue.put(i);</span><br><span class="line">                    System.out.println(<span class="string">"生产者产生了产品"</span> + i);</span><br><span class="line">                &#125;<span class="keyword">catch</span>(InterruptedException e) &#123;</span><br><span class="line">                	e.printStackTrace();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 消费者</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Consumer</span> <span class="keyword">implements</span> <span class="title">Runnable</span></span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">public</span> BlockingQueue&lt;Integer&gt; blockingQueue = <span class="keyword">new</span> LinkedBlockingDeque();</span><br><span class="line"></span><br><span class="line">        Consumer(BlockingQueue blockingQueue)&#123;</span><br><span class="line">            <span class="keyword">this</span>.blockingQueue = blockingQueue;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">while</span>(<span class="keyword">true</span>)&#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    String name = Thread.currentThread().getName();</span><br><span class="line">                    Integer queueData = blockingQueue.take();</span><br><span class="line">                    System.out.println(<span class="string">"消费者"</span>+name+<span class="string">"消费了产品"</span>+queueData);</span><br><span class="line">                &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                    e.printStackTrace();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 一个生产者对应多个消费者，采用BlockQueue作为缓冲区</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> args</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        BlockingQueue&lt;Integer&gt; blockingQueue = <span class="keyword">new</span> LinkedBlockingDeque();</span><br><span class="line">        Productor productor = <span class="keyword">new</span> Productor(blockingQueue);</span><br><span class="line">        Consumer consumer = <span class="keyword">new</span> Consumer(blockingQueue);</span><br><span class="line">        Consumer consumer2 = <span class="keyword">new</span> Consumer(blockingQueue);</span><br><span class="line">        <span class="keyword">new</span> Thread(productor).start();</span><br><span class="line">        <span class="keyword">new</span> Thread(consumer).start();</span><br><span class="line">        <span class="keyword">new</span> Thread(consumer2).start();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">执行结果：</span><br><span class="line">消费者Thread-<span class="number">2</span>消费了产品<span class="number">21</span></span><br><span class="line">生产者产品了产品<span class="number">22</span></span><br><span class="line">消费者Thread-<span class="number">1</span>消费了产品<span class="number">22</span></span><br><span class="line">生产者产品了产品<span class="number">23</span></span><br><span class="line">消费者Thread-<span class="number">2</span>消费了产品<span class="number">23</span></span><br><span class="line">生产者产品了产品<span class="number">24</span></span><br><span class="line">消费者Thread-<span class="number">1</span>消费了产品<span class="number">24</span></span><br><span class="line">生产者产品了产品<span class="number">25</span></span><br><span class="line">消费者Thread-<span class="number">2</span>消费了产品<span class="number">25</span></span><br><span class="line">生产者产品了产品<span class="number">26</span></span><br><span class="line">消费者Thread-<span class="number">1</span>消费了产品<span class="number">26</span></span><br><span class="line">生产者产品了产品<span class="number">27</span></span><br><span class="line">消费者Thread-<span class="number">2</span>消费了产品<span class="number">27</span></span><br></pre></td></tr></table></figure></li>
+</ol>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/09/05/BlockQueue线程容器/" data-id="cisq5qabb0001tsudpb1iwxnl" class="article-share-link">Share</a>
       
       
     </footer>
@@ -177,7 +238,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/09/04/深入理解ReentrantLock/" data-id="cisos2zmv000g6kud0tr6fhve" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/09/04/深入理解ReentrantLock/" data-id="cisq5qad7000htsud7ns7dyd0" class="article-share-link">Share</a>
       
       
     </footer>
@@ -248,7 +309,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/07/14/JVM调优之JVM参数/" data-id="cisos2zkv00006kudun9pvc1l" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/07/14/JVM调优之JVM参数/" data-id="cisq5qab40000tsudx76da0yx" class="article-share-link">Share</a>
       
       
     </footer>
@@ -316,7 +377,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/06/03/java线程池解析/" data-id="cisos2zlg00076kudo0t40nbt" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/06/03/java线程池解析/" data-id="cisq5qabl0007tsud6u11dz6s" class="article-share-link">Share</a>
       
       
     </footer>
@@ -359,7 +420,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/06/03/java主线程监控子线程策略解析/" data-id="cisos2zlf00066kude0drrmr6" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/06/03/java主线程监控子线程策略解析/" data-id="cisq5qabj0006tsud2dg0m2dp" class="article-share-link">Share</a>
       
       
     </footer>
@@ -451,7 +512,7 @@ op4(right)->op3(right)->op2(right)->op1(right)</textarea><textarea id="flowchart
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/02/Java类加载器原理详解/" data-id="cisos2zl500016kudgd7gepcs" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/02/Java类加载器原理详解/" data-id="cisq5qabd0002tsudsw763tsz" class="article-share-link">Share</a>
       
       
     </footer>
@@ -505,7 +566,7 @@ op4(right)->op3(right)->op2(right)->op1(right)</textarea><textarea id="flowchart
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/01/Object类之hashcode-、equals-方法原理详解/" data-id="cisos2zla00036kudkxcac6lh" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/01/Object类之hashcode-、equals-方法原理详解/" data-id="cisq5qabg0004tsudovysj5c3" class="article-share-link">Share</a>
       
       
     </footer>
@@ -580,7 +641,7 @@ op4(right)->op3(right)->op2(right)->op1(right)</textarea><textarea id="flowchart
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/01/Object类之wait-、notify-方法原理详解/" data-id="cisos2zmf000f6kudb972nb2n" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/01/Object类之wait-、notify-方法原理详解/" data-id="cisq5qacj000gtsudyij98lr6" class="article-share-link">Share</a>
       
       
     </footer>
