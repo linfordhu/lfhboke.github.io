@@ -93,7 +93,128 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2017/04/01/Mybatis（插件）/" data-id="cisq5qabf0003tsud2qdv966l" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2017/04/01/Mybatis（插件）/" data-id="cisq75fjy0002nkud6r1jhpcd" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-InnoDB可重复读" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2016/09/05/InnoDB可重复读/" class="article-date">
+  <time datetime="2016-09-05T14:48:33.000Z" itemprop="datePublished">2016-09-05</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/lfhboke.github.io/2016/09/05/InnoDB可重复读/">InnoDB可重复读</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>在RC(Read Committed)和RR(Repeatable Read)两种事务隔离级别下，InnoDB存在两种数据读取方式：</p>
+<h3 id="快照读（Snapshot-Read）"><a href="#快照读（Snapshot-Read）" class="headerlink" title="快照读（Snapshot Read）"></a>快照读（Snapshot Read）</h3><p>快照读读取的都是快照数据，快照怎么来，在InnoDB引擎下是基于undo log，那么undo log又是什么？举个例子：<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">--表结构</span></span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> <span class="string">`innodb_test`</span>(</span><br><span class="line">	<span class="string">`id`</span> <span class="built_in">INT</span>(<span class="number">11</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> AUTO_INCREMENT,</span><br><span class="line">    <span class="string">`name`</span> <span class="built_in">INT</span>(<span class="number">11</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">'0'</span>,</span><br><span class="line">    PRIMARY <span class="keyword">KEY</span>(<span class="string">`id`</span>),</span><br><span class="line">    <span class="keyword">INDEX</span> <span class="string">`idx_age`</span>(<span class="string">`age`</span>)</span><br><span class="line">)</span><br><span class="line"><span class="keyword">ENGINE</span>=<span class="keyword">InnoDB</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">--初始数据</span></span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> <span class="string">`innodb_test`</span>(<span class="string">`id`</span>, <span class="string">`name`</span>, <span class="string">`age`</span>)<span class="keyword">VALUES</span>(<span class="number">1</span>, <span class="string">'凋残'</span>, <span class="number">100</span>),(<span class="number">2</span>, <span class="string">'庄周'</span>, <span class="number">120</span>),(<span class="number">3</span>, <span class="string">'项羽'</span>, <span class="number">130</span>);</span><br></pre></td></tr></table></figure></p>
+<ol>
+<li>id=1的初始数据行</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>回滚指针</th>
+<th>事务ID</th>
+<th>id</th>
+<th>name</th>
+<th>age</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>无</td>
+<td>无</td>
+<td>1</td>
+<td>凋残</td>
+<td>100</td>
+</tr>
+</tbody>
+</table>
+<ol start="2">
+<li>事务A执行如下语句<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">UPDATE</span> innodb_test <span class="keyword">SET</span> <span class="keyword">name</span> = <span class="string">'嬴政'</span>，age = <span class="number">90</span> <span class="keyword">WHERE</span> <span class="keyword">id</span> = <span class="number">1</span>;</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>此时innodb会做如下操作：</p>
+<pre><code>1. 把该行修改前的值Copy到undo log(Copy on write)；
+2. 修改当前行的值，填写事务编号，使回滚指针指向undo log中的修改前的行。
+</code></pre><p><img src="/lfhboke.github.io/css/images/repeatread.PNG" alt="repeatread"></p>
+<ol start="2">
+<li>事务B执行如下语句<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">UPDATE</span> innodb_test <span class="keyword">SET</span> <span class="keyword">name</span>=<span class="string">'甄姬'</span>, age=<span class="number">91</span> <span class="keyword">WHERE</span> <span class="keyword">id</span>=<span class="number">1</span>;</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>此时undo log中有2条记录，它们通过回滚指针相连。<br><img src="/lfhboke.github.io/css/images/repeatread2.PNG" alt="repeatread2"><br>undo log的存在解决了两个问题，一是数据回滚，二是实现了MVCC，快照读取的就是undo log中的数据，所以这种读取是不需要加锁的，避免了读写冲突。常见的快照读语句就是最常见的SELECT，比如<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> innodb_test <span class="keyword">WHERE</span> <span class="keyword">id</span>=<span class="number">1</span>;</span><br></pre></td></tr></table></figure></p>
+<p>快照读在RC和RR隔离级别下的表现却是不一样的，为了方便说明，现在将数据还原到初始数据，然后按照下表的顺序操作。</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>事务1</th>
+<th>事务2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>begin;</td>
+<td>begin;</td>
+</tr>
+<tr>
+<td>2</td>
+<td></td>
+<td>SELECT * FROM innodb_test WHERE id=1;//输出1-凋残-100</td>
+</tr>
+<tr>
+<td>3</td>
+<td>UPDATE innodb_test SET name=’嬴政’, age=90 WHERE id=1;</td>
+<td></td>
+</tr>
+<tr>
+<td>4</td>
+<td>commit;</td>
+<td></td>
+</tr>
+<tr>
+<td>5</td>
+<td></td>
+<td>SELECT * FROM innodb_test WHERE id=1;//输出？？？</td>
+</tr>
+</tbody>
+</table>
+<p>. RC</p>
+<p>输出的最新提交的结果（1-嬴政-90），RC级别的快照读遵循以下规则：</p>
+<p>. 优先读取当前事务修改的数据，自己修改的，当然可以读到；</p>
+<p>. 其次读取最新已提交数据。</p>
+<p>会出现前后读取结果不一样的情况，但读取的是最新数据。</p>
+<p>. RR</p>
+<p>输出结果和第一次查询是一样的（1-凋残-100），RR级别的快照读遵循以下规则：</p>
+<p>. 优先读取当前事务修改的数据，和RC一样；</p>
+<p>. 其次读取小于当前事务id的最新一条已提交数据，此时数据版本已经确定了，后面的快照读取始终读取这个版本。</p>
+<p>通过这样的机制，保证了快照读的可重复读，但读取到的数据很可能已经过期了。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/09/05/InnoDB可重复读/" data-id="cisq75fjv0001nkudwjrcnzkh" class="article-share-link">Share</a>
       
       
     </footer>
@@ -154,7 +275,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/09/05/BlockQueue线程容器/" data-id="cisq5qabb0001tsudpb1iwxnl" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/09/05/BlockQueue线程容器/" data-id="cisq75fjo0000nkudx11b7vlm" class="article-share-link">Share</a>
       
       
     </footer>
@@ -238,7 +359,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/09/04/深入理解ReentrantLock/" data-id="cisq5qad7000htsud7ns7dyd0" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/09/04/深入理解ReentrantLock/" data-id="cisq75flv000inkudo37o47q1" class="article-share-link">Share</a>
       
       
     </footer>
@@ -309,7 +430,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/07/14/JVM调优之JVM参数/" data-id="cisq5qab40000tsudx76da0yx" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/07/14/JVM调优之JVM参数/" data-id="cisq75fk10004nkudf9fbxfks" class="article-share-link">Share</a>
       
       
     </footer>
@@ -377,7 +498,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/06/03/java线程池解析/" data-id="cisq5qabl0007tsud6u11dz6s" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/06/03/java线程池解析/" data-id="cisq75fk90008nkud5kmt78xb" class="article-share-link">Share</a>
       
       
     </footer>
@@ -420,7 +541,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/06/03/java主线程监控子线程策略解析/" data-id="cisq5qabj0006tsud2dg0m2dp" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/06/03/java主线程监控子线程策略解析/" data-id="cisq75fkb0009nkudpev1jeue" class="article-share-link">Share</a>
       
       
     </footer>
@@ -512,7 +633,7 @@ op4(right)->op3(right)->op2(right)->op1(right)</textarea><textarea id="flowchart
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/02/Java类加载器原理详解/" data-id="cisq5qabd0002tsudsw763tsz" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/02/Java类加载器原理详解/" data-id="cisq75fk00003nkudxyf886j5" class="article-share-link">Share</a>
       
       
     </footer>
@@ -566,7 +687,7 @@ op4(right)->op3(right)->op2(right)->op1(right)</textarea><textarea id="flowchart
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/01/Object类之hashcode-、equals-方法原理详解/" data-id="cisq5qabg0004tsudovysj5c3" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/01/Object类之hashcode-、equals-方法原理详解/" data-id="cisq75fk30005nkudxpt5mrm8" class="article-share-link">Share</a>
       
       
     </footer>
@@ -641,7 +762,7 @@ op4(right)->op3(right)->op2(right)->op1(right)</textarea><textarea id="flowchart
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/01/Object类之wait-、notify-方法原理详解/" data-id="cisq5qacj000gtsudyij98lr6" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/01/Object类之wait-、notify-方法原理详解/" data-id="cisq75fl7000hnkudy3o9cch9" class="article-share-link">Share</a>
       
       
     </footer>

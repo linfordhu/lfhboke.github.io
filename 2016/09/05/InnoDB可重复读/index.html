@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="utf-8">
+  
+
+  
+  <title>InnoDB可重复读 | lfh&#39;s bokes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="在RC(Read Committed)和RR(Repeatable Read)两种事务隔离级别下，InnoDB存在两种数据读取方式： 快照读（Snapshot Read）快照读读取的都是快照数据，快照怎么来，在InnoDB引擎下是基于undo log，那么undo log又是什么？举个例子：1234567891011--表结构CREATE TABLE `innodb_test`(	`id` INT">
+<meta property="og:type" content="article">
+<meta property="og:title" content="InnoDB可重复读">
+<meta property="og:url" content="https://linfordhu.github.io/lfhboke.github.io/2016/09/05/InnoDB可重复读/index.html">
+<meta property="og:site_name" content="lfh&#39;s bokes">
+<meta property="og:description" content="在RC(Read Committed)和RR(Repeatable Read)两种事务隔离级别下，InnoDB存在两种数据读取方式： 快照读（Snapshot Read）快照读读取的都是快照数据，快照怎么来，在InnoDB引擎下是基于undo log，那么undo log又是什么？举个例子：1234567891011--表结构CREATE TABLE `innodb_test`(	`id` INT">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/repeatread.PNG">
+<meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/repeatread2.PNG">
+<meta property="og:updated_time" content="2016-09-05T15:20:12.795Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="InnoDB可重复读">
+<meta name="twitter:description" content="在RC(Read Committed)和RR(Repeatable Read)两种事务隔离级别下，InnoDB存在两种数据读取方式： 快照读（Snapshot Read）快照读读取的都是快照数据，快照怎么来，在InnoDB引擎下是基于undo log，那么undo log又是什么？举个例子：1234567891011--表结构CREATE TABLE `innodb_test`(	`id` INT">
+<meta name="twitter:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/repeatread.PNG">
+  
+    <link rel="alternate" href="/lfhboke.github.io/atom.xml" title="lfh&#39;s bokes" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link rel="stylesheet" href="/lfhboke.github.io/css/style.css">
+</head>
+</html>
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/lfhboke.github.io/" id="logo">lfh&#39;s bokes</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/">Home</a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/lfhboke.github.io/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://linfordhu.github.io/lfhboke.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-InnoDB可重复读" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2016/09/05/InnoDB可重复读/" class="article-date">
+  <time datetime="2016-09-05T14:48:33.000Z" itemprop="datePublished">2016-09-05</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      InnoDB可重复读
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>在RC(Read Committed)和RR(Repeatable Read)两种事务隔离级别下，InnoDB存在两种数据读取方式：</p>
+<h3 id="快照读（Snapshot-Read）"><a href="#快照读（Snapshot-Read）" class="headerlink" title="快照读（Snapshot Read）"></a>快照读（Snapshot Read）</h3><p>快照读读取的都是快照数据，快照怎么来，在InnoDB引擎下是基于undo log，那么undo log又是什么？举个例子：<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">--表结构</span></span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> <span class="string">`innodb_test`</span>(</span><br><span class="line">	<span class="string">`id`</span> <span class="built_in">INT</span>(<span class="number">11</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> AUTO_INCREMENT,</span><br><span class="line">    <span class="string">`name`</span> <span class="built_in">INT</span>(<span class="number">11</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">'0'</span>,</span><br><span class="line">    PRIMARY <span class="keyword">KEY</span>(<span class="string">`id`</span>),</span><br><span class="line">    <span class="keyword">INDEX</span> <span class="string">`idx_age`</span>(<span class="string">`age`</span>)</span><br><span class="line">)</span><br><span class="line"><span class="keyword">ENGINE</span>=<span class="keyword">InnoDB</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">--初始数据</span></span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> <span class="string">`innodb_test`</span>(<span class="string">`id`</span>, <span class="string">`name`</span>, <span class="string">`age`</span>)<span class="keyword">VALUES</span>(<span class="number">1</span>, <span class="string">'凋残'</span>, <span class="number">100</span>),(<span class="number">2</span>, <span class="string">'庄周'</span>, <span class="number">120</span>),(<span class="number">3</span>, <span class="string">'项羽'</span>, <span class="number">130</span>);</span><br></pre></td></tr></table></figure></p>
+<ol>
+<li>id=1的初始数据行</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>回滚指针</th>
+<th>事务ID</th>
+<th>id</th>
+<th>name</th>
+<th>age</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>无</td>
+<td>无</td>
+<td>1</td>
+<td>凋残</td>
+<td>100</td>
+</tr>
+</tbody>
+</table>
+<ol start="2">
+<li>事务A执行如下语句<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">UPDATE</span> innodb_test <span class="keyword">SET</span> <span class="keyword">name</span> = <span class="string">'嬴政'</span>，age = <span class="number">90</span> <span class="keyword">WHERE</span> <span class="keyword">id</span> = <span class="number">1</span>;</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>此时innodb会做如下操作：</p>
+<pre><code>1. 把该行修改前的值Copy到undo log(Copy on write)；
+2. 修改当前行的值，填写事务编号，使回滚指针指向undo log中的修改前的行。
+</code></pre><p><img src="/lfhboke.github.io/css/images/repeatread.PNG" alt="repeatread"></p>
+<ol start="2">
+<li>事务B执行如下语句<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">UPDATE</span> innodb_test <span class="keyword">SET</span> <span class="keyword">name</span>=<span class="string">'甄姬'</span>, age=<span class="number">91</span> <span class="keyword">WHERE</span> <span class="keyword">id</span>=<span class="number">1</span>;</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>此时undo log中有2条记录，它们通过回滚指针相连。<br><img src="/lfhboke.github.io/css/images/repeatread2.PNG" alt="repeatread2"><br>undo log的存在解决了两个问题，一是数据回滚，二是实现了MVCC，快照读取的就是undo log中的数据，所以这种读取是不需要加锁的，避免了读写冲突。常见的快照读语句就是最常见的SELECT，比如<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> innodb_test <span class="keyword">WHERE</span> <span class="keyword">id</span>=<span class="number">1</span>;</span><br></pre></td></tr></table></figure></p>
+<p>快照读在RC和RR隔离级别下的表现却是不一样的，为了方便说明，现在将数据还原到初始数据，然后按照下表的顺序操作。</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>事务1</th>
+<th>事务2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>begin;</td>
+<td>begin;</td>
+</tr>
+<tr>
+<td>2</td>
+<td></td>
+<td>SELECT * FROM innodb_test WHERE id=1;//输出1-凋残-100</td>
+</tr>
+<tr>
+<td>3</td>
+<td>UPDATE innodb_test SET name=’嬴政’, age=90 WHERE id=1;</td>
+<td></td>
+</tr>
+<tr>
+<td>4</td>
+<td>commit;</td>
+<td></td>
+</tr>
+<tr>
+<td>5</td>
+<td></td>
+<td>SELECT * FROM innodb_test WHERE id=1;//输出？？？</td>
+</tr>
+</tbody>
+</table>
+<p>. RC</p>
+<p>输出的最新提交的结果（1-嬴政-90），RC级别的快照读遵循以下规则：</p>
+<p>. 优先读取当前事务修改的数据，自己修改的，当然可以读到；</p>
+<p>. 其次读取最新已提交数据。</p>
+<p>会出现前后读取结果不一样的情况，但读取的是最新数据。</p>
+<p>. RR</p>
+<p>输出结果和第一次查询是一样的（1-凋残-100），RR级别的快照读遵循以下规则：</p>
+<p>. 优先读取当前事务修改的数据，和RC一样；</p>
+<p>. 其次读取小于当前事务id的最新一条已提交数据，此时数据版本已经确定了，后面的快照读取始终读取这个版本。</p>
+<p>通过这样的机制，保证了快照读的可重复读，但读取到的数据很可能已经过期了。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/09/05/InnoDB可重复读/" data-id="cisq75fjv0001nkudwjrcnzkh" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/lfhboke.github.io/2017/04/01/Mybatis（插件）/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          Mybatis（插件）
+        
+      </div>
+    </a>
+  
+  
+    <a href="/lfhboke.github.io/2016/09/05/BlockQueue线程容器/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">BlockQueue线程容器</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/05/">May 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/03/">March 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2018/10/">October 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/04/">April 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/09/">September 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/07/">July 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/06/">June 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/01/">January 2016</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/05/22/redis之LRU算法/">redis之LRU算法</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/05/22/java8新特性/">java8新特性</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/03/01/流计算框架之storm（基础篇）/">流计算框架之storm（基础篇）</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2018/10/13/消息中间件之kafka-原理篇/">消息中间件之kafka(原理篇)</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2018/10/13/消息中间件之kafka-基础篇/">消息中间件之kafka(基础篇)</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2016 lfhu<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/lfhboke.github.io/" class="mobile-nav-link">Home</a>
+  
+    <a href="/lfhboke.github.io/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/lfhboke.github.io/fancybox/jquery.fancybox.css">
+  <script src="/lfhboke.github.io/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/lfhboke.github.io/js/script.js"></script>
+
+
+
+  </div>
+</body>
+</html>
