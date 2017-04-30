@@ -62,6 +62,118 @@
       <div class="outer">
         <section id="main">
   
+    <article id="post-Mybatis（插件）" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2017/04/01/Mybatis（插件）/" class="article-date">
+  <time datetime="2017-04-01T12:26:15.000Z" itemprop="datePublished">2017-04-01</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/lfhboke.github.io/2017/04/01/Mybatis（插件）/">Mybatis（插件）</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>先从一个简单的例子入手：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Intercepts</span>(&#123;<span class="meta">@Signature</span>(type = StatementHandler.class, method = <span class="string">"prepare"</span>, args = &#123;Connection.class&#125;)&#125;)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyPlugin</span> <span class="keyword">implements</span> <span class="title">Interceptor</span></span>&#123;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">int</span> limit;</span><br><span class="line">    <span class="keyword">private</span> String dbType;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String LMT_TABLE_NAME = <span class="string">"MY_TABLE"</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">intercept</span><span class="params">(Invocation invocation)</span> <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line">    	StatementHandler stmtHandler = (StatementHandler) invocation.getTarget();</span><br><span class="line">        MetaObject metaStmtHandler = SystemMetaObject.forObject(stmtHandler);</span><br><span class="line">        </span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>需要实现Interceptor：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">Interceptor</span></span>&#123;</span><br><span class="line">	<span class="function">Object <span class="title">intercept</span><span class="params">(Invocation invocation)</span> <span class="keyword">throws</span> Throwable</span>;</span><br><span class="line">    <span class="function">Object <span class="title">plugin</span><span class="params">(Object target)</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">setProperties</span><span class="params">(Properties properties)</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>intercept方法：覆盖所拦截对象原有方法，其中参数Invocation对象，通过它可以反射调度原来对象的方法。</p>
+<p>plugin方法：target是被拦截对象，它的作用是给被拦截对象生成一个代理对象，并返回。</p>
+<p>setProperties方法：允许在plugin元素中配置所需参数，方法在插件初始化的时候就被调用了一次，然后把插件对象存入到配置中，以便后面取出。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2017/04/01/Mybatis（插件）/" data-id="cj24x4ikc0002v0udkvtrexj1" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-JVM调优之JVM参数" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2016/07/14/JVM调优之JVM参数/" class="article-date">
+  <time datetime="2016-07-14T12:28:33.000Z" itemprop="datePublished">2016-07-14</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/lfhboke.github.io/2016/07/14/JVM调优之JVM参数/">JVM调优之JVM参数</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>-Xmx 512m：设置JVM最大堆内存为512M。</p>
+<p>-Xms 512m：设置JVM初始堆内存为512M。</p>
+<p>-Xss 128k：设置每个线程的栈大小。</p>
+<p>-Xmn 512m：设置新生代大小为512M。</p>
+<p>-XX:NewSize=512m：设置新生代初始值为512M。</p>
+<p>-XX:MaxNewSize=1024m：设置新生代最大值为1024M。</p>
+<p>-XX:PermSize=256m：设置永久代初始值为256M。</p>
+<p>-XX:MaxPermSize=256m：设置永久代最大值为256M。</p>
+<p>-XX:NewRatio=4：设置新生代（包括2个Eden和2个Survivor区）与老年代的比值。表示新生代比老年代为1：4.</p>
+<p>-XX:SurvivorRatio=4:设置新生代中Eden区和Suvivor区的比值。表示2个Survivor区（JVM堆内存新生代中默认有2个大小相等的Suvivor区）与1个Eden区的比值为2：4。</p>
+<p>-XX:MaxTenuringThreshold=7：表示一个对象如果在Suvivor区移动了7次还没有被垃圾回收就进入老年代。如果设置为0的话，则新生代不经过Survivor区直接进入老年代。</p>
+<font color="red">-Xmn，-XX:NewSize/-XX:MaxNewSize,-XX:NewRatio3组参数都可以影响新生代，优先级如下</font>：<br><br><font color="red">高优先级:-XX:NewSize/-XX:MaxNewSize</font>
+
+<font color="red">中优先级：-Xmn（默认等于-Xmn=-XX:NewSize=-XX:MaxNewSize=?）</font>
+
+<font color="red">低优先级：-XX:NewRatio</font>
+
+<h3 id="垃圾回收器选择"><a href="#垃圾回收器选择" class="headerlink" title="垃圾回收器选择"></a>垃圾回收器选择</h3><p>JVM给出了3种选择：串行收集器、并行收集器、并发收集器。串行收集器只适用于小数据量的情况，所以生产环境的选择主要是并行收集器和并发收集器。</p>
+<p>-XX:+UseSerialGC：设置为串行收集器。</p>
+<p>-XX:+UseParallelGC：设置并行收集器。此配置仅对新生代有效。即新生代使用并行收集，而老年代仍使用串行收集。</p>
+<p>-XX:ParallelGCThreads=20：配置并行收集器的线程数，即：同时有多少个线程一起进行垃圾回收。建议配置与CPU数目相等。</p>
+<p>-XX:+UseParallelOldGC：配置老年代垃圾收集方式为并行收集。</p>
+<p>-XX:MaxGCPauseMillis=100：设置每次新生代垃圾回收的最长时间（单位毫秒）。如果无法满足此时间，JVM自动调整新生代大小，以满足此时间。</p>
+<p>-XX:+UseAdaptiveSizePolicy：设置此选项后，并行收集器会自动调整新生代Eden区大小和Survivor区大小的比例，以达成目标系统规定的最低响应时间或者收集频率等指标。此参数建议在使用并行收集器时，一直打开。</p>
+<p>-XX:+UseConcMarkSweepGC：即CMS收集，设置老年代为并发收集。CMS主要适合场景是对响应时间的重要性需求大于对吞吐量的需求，能够承受垃圾回收线程和应用线程共享CPU资源，并且应用中存在比较多的长生命周期的对象。CMS收集的目标是尽量减少应用的暂停时间，减少Full GC发生的机率，利用和应用程序并发的垃圾回收线程来标记清除老年代内存。</p>
+<p>-XX:+UseParNewGC：设置新生代并发收集。可与CMS收集同时使用。</p>
+<p>-XX:CMSFullGCsBeforeCompaction=0：由于并发收集器不对内存空间进行压缩和整理，所以运行一段时间并行收集以后会产生内存碎片，内存使用效率降低。此参数设置运行0次FullGC后对内存空间进行压缩和整理，即每次FullGC后立刻开始压缩和整理内存。</p>
+<p>-XX:+UseCMSCompactAtFullCollection：打开内存空间的压缩和整理，在FullGC后执行。可能会影响性能，但可以消除内存碎片。</p>
+<p>-XX:+CMSIncrementalMode：设置为增量收集模式。</p>
+<p>-XX:CMSInitiatingOccupancyFraction=70：表示老年代内存使用到70%时开始执行CMS收集，以确保老年代有足够的空间接纳来自新生代的对象，避免FullGC的发生。</p>
+<p>-XX:+ScavengeBeforeFullGC：新生代GC优于FullGC执行</p>
+<p>-XX:-DisableExplicitGC：不响应System.gc()代码。</p>
+<p>-XX:+UseThreadPriorities：启用本地线程优先级API。即使java.lang.Thread.setPriority()生效，不启用则无效。</p>
+<p>-XX:+SoftRefLRUPolicyMSPerMB=0：软引用对象在最后一次被访问后能存活0毫秒。</p>
+<p>-XX:TargetSurvivorRatio=90：允许90%的Survivor区被占用。提高对于Survivor区使用率。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/07/14/JVM调优之JVM参数/" data-id="cj24x4ik20000v0ud1zd3yv6p" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
     <article id="post-java线程池解析" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/lfhboke.github.io/2016/06/03/java线程池解析/" class="article-date">
@@ -120,7 +232,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/06/03/java线程池解析/" data-id="cj7kjbwpb00073kud2wn981do" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/06/03/java线程池解析/" data-id="cj24x4iks0007v0udxsxlm1xf" class="article-share-link">Share</a>
       
       
     </footer>
@@ -163,7 +275,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/06/03/java主线程监控子线程策略解析/" data-id="cj7kjbwp500063kud5x832d8w" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/06/03/java主线程监控子线程策略解析/" data-id="cj24x4ikl0006v0udhrtol8v4" class="article-share-link">Share</a>
       
       
     </footer>
@@ -255,7 +367,7 @@ op4(right)->op3(right)->op2(right)->op1(right)</textarea><textarea id="flowchart
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/02/Java类加载器原理详解/" data-id="cj7kjbwoj00003kudype8moru" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/02/Java类加载器原理详解/" data-id="cj24x4ik90001v0uddkzh9t9b" class="article-share-link">Share</a>
       
       
     </footer>
@@ -309,7 +421,7 @@ op4(right)->op3(right)->op2(right)->op1(right)</textarea><textarea id="flowchart
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/01/Object类之hashcode-、equals-方法原理详解/" data-id="cj7kjbwoy00033kud847ifc0s" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/01/Object类之hashcode-、equals-方法原理详解/" data-id="cj24x4ikj0005v0udqyoa7y48" class="article-share-link">Share</a>
       
       
     </footer>
@@ -384,7 +496,7 @@ op4(right)->op3(right)->op2(right)->op1(right)</textarea><textarea id="flowchart
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/01/Object类之wait-、notify-方法原理详解/" data-id="cj7kjbwpx000e3kudmu3omhft" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/01/Object类之wait-、notify-方法原理详解/" data-id="cj24x4ils000dv0udblr7vebf" class="article-share-link">Share</a>
       
       
     </footer>
@@ -430,6 +542,10 @@ op4(right)->op3(right)->op2(right)->op1(right)</textarea><textarea id="flowchart
       <ul>
         
           <li>
+            <a href="/lfhboke.github.io/2019/05/22/redis之LRU算法/">redis之LRU算法</a>
+          </li>
+        
+          <li>
             <a href="/lfhboke.github.io/2019/05/22/java8新特性/">java8新特性</a>
           </li>
         
@@ -443,10 +559,6 @@ op4(right)->op3(right)->op2(right)->op1(right)</textarea><textarea id="flowchart
         
           <li>
             <a href="/lfhboke.github.io/2018/10/13/消息中间件之kafka-基础篇/">消息中间件之kafka(基础篇)</a>
-          </li>
-        
-          <li>
-            <a href="/lfhboke.github.io/2017/09/14/Mybatis之SqlSession四大对象/">Mybatis之SqlSession四大对象</a>
           </li>
         
       </ul>
