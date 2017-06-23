@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="utf-8">
+  
+
+  
+  <title>Java并发工具类之LongAdder | lfh&#39;s bokes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="LongAdder是Java8新出的工具类，个人认为是一个以牺牲空间换取性能的工具。下面是LongAdder是将一个变量进一步拆分到一个base数组中，减少资源竞争123456789101112131415161718192021@sun.misc.Contended static final class Cell&amp;#123;	volatile long value;    Cell(long x">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Java并发工具类之LongAdder">
+<meta property="og:url" content="https://linfordhu.github.io/lfhboke.github.io/2019/06/17/Java并发工具类之LongAdder/index.html">
+<meta property="og:site_name" content="lfh&#39;s bokes">
+<meta property="og:description" content="LongAdder是Java8新出的工具类，个人认为是一个以牺牲空间换取性能的工具。下面是LongAdder是将一个变量进一步拆分到一个base数组中，减少资源竞争123456789101112131415161718192021@sun.misc.Contended static final class Cell&amp;#123;	volatile long value;    Cell(long x">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/atomiclong.PNG">
+<meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/longadder.PNG">
+<meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/threadprocess.PNG">
+<meta property="og:updated_time" content="2019-06-18T15:00:30.578Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Java并发工具类之LongAdder">
+<meta name="twitter:description" content="LongAdder是Java8新出的工具类，个人认为是一个以牺牲空间换取性能的工具。下面是LongAdder是将一个变量进一步拆分到一个base数组中，减少资源竞争123456789101112131415161718192021@sun.misc.Contended static final class Cell&amp;#123;	volatile long value;    Cell(long x">
+<meta name="twitter:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/atomiclong.PNG">
+  
+    <link rel="alternate" href="/lfhboke.github.io/atom.xml" title="lfh&#39;s bokes" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link rel="stylesheet" href="/lfhboke.github.io/css/style.css">
+</head>
+</html>
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/lfhboke.github.io/" id="logo">lfh&#39;s bokes</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/">Home</a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/lfhboke.github.io/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://linfordhu.github.io/lfhboke.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-Java并发工具类之LongAdder" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2019/06/17/Java并发工具类之LongAdder/" class="article-date">
+  <time datetime="2019-06-17T14:28:40.000Z" itemprop="datePublished">2019-06-17</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      Java并发工具类之LongAdder
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>LongAdder是Java8新出的工具类，个人认为是一个以牺牲空间换取性能的工具。<br><img src="/lfhboke.github.io/css/images/atomiclong.PNG" alt="AtomicLong"><br>下面是LongAdder<br><img src="/lfhboke.github.io/css/images/longadder.PNG" alt="LongAdder"><br>是将一个变量进一步拆分到一个base数组中，减少资源竞争<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@sun</span>.misc.Contended <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">Cell</span></span>&#123;</span><br><span class="line">	<span class="keyword">volatile</span> <span class="keyword">long</span> value;</span><br><span class="line">    Cell(<span class="keyword">long</span> x) &#123;</span><br><span class="line">    	value = x;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">cas</span><span class="params">(<span class="keyword">long</span> cmp, <span class="keyword">long</span> val)</span> </span>&#123;</span><br><span class="line">    	<span class="keyword">return</span> UNSAFE.compareAndSwapLong(<span class="keyword">this</span>, valueOffset, cmp, val);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> sun.misc.Unsafe UNSAFE;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">long</span> valueOffset;</span><br><span class="line">    <span class="keyword">static</span> &#123; </span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">      	UNSAFE = sun.misc.Unsafe.getUnsafe();</span><br><span class="line">        Class&lt;?&gt; ak = Cell.class;</span><br><span class="line">        valueOffset = UNSAFE.objectFieldOffset(ak.getDeclaredField(<span class="string">"value"</span>));</span><br><span class="line">      &#125; <span class="keyword">catch</span>( Exception e ) &#123;</span><br><span class="line">          <span class="keyword">throw</span> <span class="keyword">new</span> Error(e);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<ol>
+<li>类似于AtomicLong，利用CAS来更新变量</li>
+<li>@Contended避免value伪共享</li>
+</ol>
+<p>将多个cell数组中的值加起来的和就类似于AtomicLong中的value<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">sum</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	Cell[] as = cells;</span><br><span class="line">    Cell a;</span><br><span class="line">    <span class="keyword">long</span> sum = base;</span><br><span class="line">    <span class="keyword">if</span> ( as != <span class="keyword">null</span> ) &#123;</span><br><span class="line">    	<span class="keyword">for</span>( <span class="keyword">int</span> i = <span class="number">0</span>; i &lt; as.length; ++i ) &#123;</span><br><span class="line">        	<span class="keyword">if</span> ( ( a = as[i] != <span class="keyword">null</span> ) ) &#123;</span><br><span class="line">            	sum += a.value;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> sum;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>increment()的调用链<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">java.util.concurrent.atomic.LongAdder.increment</span><br><span class="line">-&gt;java.util.concurrent.atomic.LongAdder.add</span><br></pre></td></tr></table></figure></p>
+<p><img src="/lfhboke.github.io/css/images/threadprocess.PNG" alt="ThreadProcess"><br>add()方法如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">add</span><span class="params">(<span class="keyword">long</span> x)</span> </span>&#123;</span><br><span class="line">	Cell[] as; </span><br><span class="line">    <span class="keyword">long</span> b, v;</span><br><span class="line">    <span class="keyword">int</span> m;</span><br><span class="line">    Cell a;</span><br><span class="line">    <span class="keyword">if</span> ((as = cells) != <span class="keyword">null</span> || !casBase(b = base, b+x)) &#123;</span><br><span class="line">    	<span class="keyword">boolean</span> uncontended = <span class="keyword">true</span>;</span><br><span class="line">        <span class="keyword">if</span> ( as == <span class="keyword">null</span> || (m = as.length - <span class="number">1</span>) &lt; <span class="number">0</span> || (a = as[getProbe() &amp; m]) == <span class="keyword">null</span> || !(uncontended = a.cas( v = a.value, v+x )) ) &#123;</span><br><span class="line">        	longAccumulate(x, <span class="keyword">null</span>, uncontended);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>第一次Cell数组为空，进入casBase()<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">casBase</span><span class="params">(<span class="keyword">long</span> cmp, <span class="keyword">long</span> val)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">return</span> UNSAFE.compareAndSwapLong(<span class="keyword">this</span>, BASE, cmp, val);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>即原子更新，成功则直接返回，失败则说明出现并发了if的三个判断</p>
+<ol>
+<li>数组为空</li>
+<li>或者数组长度小于1</li>
+<li>或者位置上没有Cell对象，即getProbe()&amp;m其实相当于hashMap里面的tab[i=(n-1)&amp;hash]</li>
+<li>或者修改cell的值失败<br>才会最终进入到longAccumulate()方法中<h5 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h5></li>
+<li>如果Cells表为空，尝试用CAS更新base字段，成功则退出；</li>
+<li>如果Cells表为空，CAS更新base字段失败，出现竞争，uncontend为true，调用longAccumulate；</li>
+<li>如果Cells表非空，且前线程映射的槽非空，CAS更新Cell的值，成功则返回，否则，uncontended设为false，调用longAccumulate。</li>
+</ol>
+<p>制约AtomicLong高效的原因是高并发，高并发意味着CAS的失败几率更高，重试次数更多，越多线程重试，CAS失败几率又越高，AtomicLong效率降低。LongAdder通过减少并发，将单一value的更新压力分担到多个value中去，降低单个value的“热度”，分段更新。</p>
+<p>这样，线程数再多也会分担到多个value上去更新，只需要增加value就可以降低value的“热度”。cells就是这个“段”cell中的value就是存放更新值。</p>
+<p>caseBase操作等价于AtomicLong中的CAS操作，要知道，LongAdder这样的处理方式是有坏处的，分段操作必然带来空间上的浪费，可以空间换时间。</p>
+<p>caseBase操作保证了在低并发时，不会立即进入分支做分段更新操作，因为低并发时，caseBase操作基本都会成功，只有并发高到一定程度了，才会进入分支。</p>
+<p>longAccumulate()方法如下<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">final</span> <span class="keyword">void</span> <span class="title">longAccumulate</span><span class="params">(<span class="keyword">long</span> x, LongBinaryOperator fn, <span class="keyword">boolean</span> wasUncontended)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">int</span> h;</span><br><span class="line">    <span class="keyword">if</span> ((h = getProbe()) == <span class="number">0</span>) &#123;</span><br><span class="line">    	ThreadLocalRandom.current();</span><br><span class="line">        h = getProbe();</span><br><span class="line">        wasUncontended = <span class="keyword">true</span>;  </span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">boolean</span> collide = <span class="keyword">false</span>;</span><br><span class="line">    <span class="keyword">for</span>(;;) &#123;</span><br><span class="line">    	Cell[] as; Cell a; <span class="keyword">int</span> n; <span class="keyword">long</span> v;</span><br><span class="line">        <span class="keyword">if</span>((as = cells) != <span class="keyword">null</span> &amp;&amp; (n = as.length) &gt; <span class="number">0</span>) &#123;</span><br><span class="line">        	<span class="keyword">if</span> ( (a = as[(n-<span class="number">1</span>)&amp;h]) == <span class="keyword">null</span> ) &#123;</span><br><span class="line">            	<span class="keyword">if</span>(cellsBusy == <span class="number">0</span>) &#123;</span><br><span class="line">                </span><br><span class="line"> 	Cell r = <span class="keyword">new</span> Cell(x);</span><br><span class="line">    <span class="keyword">if</span>(cellsBusy == <span class="number">0</span> &amp;&amp; casCellsBusy()) &#123;</span><br><span class="line">    	<span class="keyword">boolean</span> created = <span class="keyword">false</span>;</span><br><span class="line">        <span class="keyword">try</span>&#123;</span><br><span class="line">        	Cell[] rs;<span class="keyword">int</span> m, j;</span><br><span class="line">            <span class="keyword">if</span>((rs = cells) != <span class="keyword">null</span> &amp;&amp; (m = rs.length) &gt; <span class="number">0</span> &amp;&amp; rs[j = (m - <span class="number">1</span>)&amp;h] == <span class="keyword">null</span>) &#123;</span><br><span class="line">            	rs[j] = r;</span><br><span class="line">                created = <span class="keyword">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;<span class="keyword">finally</span>&#123;</span><br><span class="line">        	cellsBusy = <span class="number">0</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span>(created)</span><br><span class="line">        	<span class="keyword">break</span>;</span><br><span class="line">        <span class="keyword">continue</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    collide = <span class="keyword">false</span>;</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span>(!wasUncontended)</span><br><span class="line">            	wasUncontended = <span class="keyword">true</span>;</span><br><span class="line">            <span class="keyword">else</span> <span class="keyword">if</span>(a.cas(v = a.value, ((fn == <span class="keyword">null</span>) ?v+x: fn.applyAsLong(v, x))))</span><br><span class="line">            	<span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">else</span> <span class="keyword">if</span>(cellsBusy == <span class="number">0</span> &amp;&amp; casCellsBusy()) &#123;</span><br><span class="line">            	</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<ol>
+<li>如果Cells表为空，尝试获取锁之后初始化表（初始大小为2）；</li>
+<li>如果Cells表非空，对应的Cell为空，自旋锁未被占用，尝试获取锁，添加新的Cell；</li>
+<li>如果Cells表非空，找到线程对应的Cell，尝试通过CAS更新该值；</li>
+<li>如果Cells表非空，线程对应的Cell CAS更新失败，说明存在竞争，尝试获取自旋锁之后扩容，将cells数组扩大，降低每个cell的并发量后再试</li>
+</ol>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/06/17/Java并发工具类之LongAdder/" data-id="cj49du1ns0004l4udy413f6v6" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/lfhboke.github.io/2019/06/18/Java并发之AQS详解/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          Java并发之AQS详解
+        
+      </div>
+    </a>
+  
+  
+    <a href="/lfhboke.github.io/2019/05/22/redis之LRU算法/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">redis之LRU算法</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/06/">June 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/05/">May 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/03/">March 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2018/10/">October 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/04/">April 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/09/">September 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/07/">July 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/06/">June 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/01/">January 2016</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/06/20/Collections解读/">Collections解读</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/06/18/Java并发之AQS详解/">Java并发之AQS详解</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/06/17/Java并发工具类之LongAdder/">Java并发工具类之LongAdder</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/05/22/redis之LRU算法/">redis之LRU算法</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/05/22/java8新特性/">java8新特性</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2017 lfhu<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/lfhboke.github.io/" class="mobile-nav-link">Home</a>
+  
+    <a href="/lfhboke.github.io/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/lfhboke.github.io/fancybox/jquery.fancybox.css">
+  <script src="/lfhboke.github.io/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/lfhboke.github.io/js/script.js"></script>
+
+
+
+  </div>
+</body>
+</html>

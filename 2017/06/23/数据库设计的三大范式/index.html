@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="utf-8">
+  
+
+  
+  <title>数据库设计的三大范式 | lfh&#39;s bokes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="什么是范式：简而言之就是，数据库设计对数据存储性能，还有开发人员对数据的操作都有莫大的关系。所以建立科学的，规范的数据库是需要满足一些规范来优化数据存储方式。 三大范式概念第一范式：当关系模式R的所有属性都不能在分解为更基本的数据单位时，称R是满足第一范式的，简记为1NF。满足第一范式是关系模式规范化的最低要求，否则，将有很多基本操作在这样的关系模式中实现不了。第二范式：如果关系模式R满足第一范式">
+<meta property="og:type" content="article">
+<meta property="og:title" content="数据库设计的三大范式">
+<meta property="og:url" content="https://linfordhu.github.io/lfhboke.github.io/2017/06/23/数据库设计的三大范式/index.html">
+<meta property="og:site_name" content="lfh&#39;s bokes">
+<meta property="og:description" content="什么是范式：简而言之就是，数据库设计对数据存储性能，还有开发人员对数据的操作都有莫大的关系。所以建立科学的，规范的数据库是需要满足一些规范来优化数据存储方式。 三大范式概念第一范式：当关系模式R的所有属性都不能在分解为更基本的数据单位时，称R是满足第一范式的，简记为1NF。满足第一范式是关系模式规范化的最低要求，否则，将有很多基本操作在这样的关系模式中实现不了。第二范式：如果关系模式R满足第一范式">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2017-06-23T04:48:11.685Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="数据库设计的三大范式">
+<meta name="twitter:description" content="什么是范式：简而言之就是，数据库设计对数据存储性能，还有开发人员对数据的操作都有莫大的关系。所以建立科学的，规范的数据库是需要满足一些规范来优化数据存储方式。 三大范式概念第一范式：当关系模式R的所有属性都不能在分解为更基本的数据单位时，称R是满足第一范式的，简记为1NF。满足第一范式是关系模式规范化的最低要求，否则，将有很多基本操作在这样的关系模式中实现不了。第二范式：如果关系模式R满足第一范式">
+  
+    <link rel="alternate" href="/lfhboke.github.io/atom.xml" title="lfh&#39;s bokes" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link rel="stylesheet" href="/lfhboke.github.io/css/style.css">
+</head>
+</html>
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/lfhboke.github.io/" id="logo">lfh&#39;s bokes</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/">Home</a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/lfhboke.github.io/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://linfordhu.github.io/lfhboke.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-数据库设计的三大范式" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2017/06/23/数据库设计的三大范式/" class="article-date">
+  <time datetime="2017-06-23T03:43:42.000Z" itemprop="datePublished">2017-06-23</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      数据库设计的三大范式
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>什么是范式：简而言之就是，数据库设计对数据存储性能，还有开发人员对数据的操作都有莫大的关系。所以建立科学的，规范的数据库是需要满足一些规范来优化数据存储方式。</p>
+<h3 id="三大范式概念"><a href="#三大范式概念" class="headerlink" title="三大范式概念"></a>三大范式概念</h3><p>第一范式：当关系模式R的所有属性都不能在分解为更基本的数据单位时，称R是满足第一范式的，简记为1NF。满足第一范式是关系模式规范化的最低要求，否则，将有很多基本操作在这样的关系模式中实现不了。<br>第二范式：如果关系模式R满足第一范式，并且R的所有非主属性都完全依赖于R的每一个候选关键属性，称R满足第二范式，简记为2NF。<br>第三范式：设R是一个满足第一范式条件的关系模式，X是R的任意属性集，如果X非传递依赖于R的任意一个候选关键字，称R满足第三范式，3NF。</p>
+<h3 id="理解三大范式"><a href="#理解三大范式" class="headerlink" title="理解三大范式"></a>理解三大范式</h3><h4 id="第一范式"><a href="#第一范式" class="headerlink" title="第一范式"></a>第一范式</h4><ol>
+<li>每一列属性都是不可再分的属性值，确保每一列的原子性</li>
+<li>两列的属性相近或相似或一样，尽量合并属性一样的列，确保不产生冗余数据。</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Name</th>
+<th>Code</th>
+<th>DataType</th>
+<th>Length</th>
+<th>Precision</th>
+<th>P</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td> 1</td>
+<td>留言编号</td>
+<td>MsgId</td>
+<td>int</td>
+<td></td>
+<td></td>
+<td>true</td>
+</tr>
+<tr>
+<td> 2</td>
+<td>留言人姓名</td>
+<td>Name</td>
+<td>varchar(30)</td>
+<td>30</td>
+<td></td>
+<td>false</td>
+</tr>
+<tr>
+<td> 3</td>
+<td>地址</td>
+<td>Address</td>
+<td>varchar(80)</td>
+<td>80</td>
+<td></td>
+<td>false</td>
+</tr>
+</tbody>
+</table>
+<p> 如果需求直到那个省哪个市并按其分类，那么显然第一个表格不容易满足需求的，也不符合第一范式。</p>
+<h4 id="第二范式"><a href="#第二范式" class="headerlink" title="第二范式"></a>第二范式</h4><p> 每一行的数据只能与其中一列相关，即一行数据只做一件事。只要数据列中出现数据重复，就要把表拆分开来。</p>
+<h4 id="第三范式"><a href="#第三范式" class="headerlink" title="第三范式"></a>第三范式</h4><p> 数据不能存在传递关系，即每个属性都跟主键有直接关系而不是间接关系。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2017/06/23/数据库设计的三大范式/" data-id="cj49du1ol000el4udq3uocysp" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/lfhboke.github.io/2017/09/14/Mybatis之SqlSession四大对象/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          Mybatis之SqlSession四大对象
+        
+      </div>
+    </a>
+  
+  
+    <a href="/lfhboke.github.io/2017/06/22/JDk动态代理与CGLIB动态代理的区别以及它们实现原理/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">JDK动态代理与CGLIB动态代理的区别以及它们实现原理（1）</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/06/">June 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/05/">May 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/03/">March 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2018/10/">October 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/04/">April 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/09/">September 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/07/">July 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/06/">June 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/01/">January 2016</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/06/20/Collections解读/">Collections解读</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/06/18/Java并发之AQS详解/">Java并发之AQS详解</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/06/17/Java并发工具类之LongAdder/">Java并发工具类之LongAdder</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/05/22/redis之LRU算法/">redis之LRU算法</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/05/22/java8新特性/">java8新特性</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2017 lfhu<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/lfhboke.github.io/" class="mobile-nav-link">Home</a>
+  
+    <a href="/lfhboke.github.io/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/lfhboke.github.io/fancybox/jquery.fancybox.css">
+  <script src="/lfhboke.github.io/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/lfhboke.github.io/js/script.js"></script>
+
+
+
+  </div>
+</body>
+</html>

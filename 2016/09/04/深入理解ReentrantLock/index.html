@@ -15,7 +15,7 @@
 <meta property="og:description" content="在Java中通常实现锁有两种方式，一种是synchronized关键字，另一种是Lock。二者其实并没有什么必然联系，但是各有各的特点，在使用中可以进行取舍的使用。 实现：首先最大的不同：synchronized是基于JVM层面实现的，而Lock是基于JDK层面实现的。 使用：对于使用者的直观体验上Lock是比较复杂的，需要lock和realse，如果忘记释放锁就会产生死锁的问题，所以，通常需要在">
 <meta property="og:locale" content="default">
 <meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/lockuml.PNG">
-<meta property="og:updated_time" content="2016-09-04T15:32:19.632Z">
+<meta property="og:updated_time" content="2019-06-17T14:03:00.433Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="深入理解ReentrantLock">
 <meta name="twitter:description" content="在Java中通常实现锁有两种方式，一种是synchronized关键字，另一种是Lock。二者其实并没有什么必然联系，但是各有各的特点，在使用中可以进行取舍的使用。 实现：首先最大的不同：synchronized是基于JVM层面实现的，而Lock是基于JDK层面实现的。 使用：对于使用者的直观体验上Lock是比较复杂的，需要lock和realse，如果忘记释放锁就会产生死锁的问题，所以，通常需要在">
@@ -136,11 +136,11 @@
 <p>此方法比较简单，其实就是使当前的线程park，即暂停了线程的轮询。当Unlock时会做后续节点的Unpark唤醒线程继续争抢锁。<br>接下来看一下锁的释放过程，锁释放主要是通过unlock方法实现：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">    * Attempts to release this lock.</span></span><br><span class="line"><span class="comment">    *</span></span><br><span class="line"><span class="comment">    * &lt;p&gt;If the current thread is the holder of this lock then the hold</span></span><br><span class="line"><span class="comment">    * count is decremented.  If the hold count is now zero then the lock</span></span><br><span class="line"><span class="comment">    * is released.  If the current thread is not the holder of this</span></span><br><span class="line"><span class="comment">    * lock then &#123;<span class="doctag">@link</span> IllegalMonitorStateException&#125; is thrown.</span></span><br><span class="line"><span class="comment">    *</span></span><br><span class="line"><span class="comment">    * <span class="doctag">@throws</span> IllegalMonitorStateException if the current thread does not</span></span><br><span class="line"><span class="comment">    *         hold this lock</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">unlock</span><span class="params">()</span> </span>&#123;</span><br><span class="line">       sync.release(<span class="number">1</span>);</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure></p>
 <p>主要是调用AbstractQueuedSynchronizer同步器的release方法：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Releases in exclusive mode.  Implemented by unblocking one or</span></span><br><span class="line"><span class="comment">     * more threads if &#123;<span class="doctag">@link</span> #tryRelease&#125; returns true.</span></span><br><span class="line"><span class="comment">     * This method can be used to implement method &#123;<span class="doctag">@link</span> Lock#unlock&#125;.</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> arg the release argument.  This value is conveyed to</span></span><br><span class="line"><span class="comment">     *        &#123;<span class="doctag">@link</span> #tryRelease&#125; but is otherwise uninterpreted and</span></span><br><span class="line"><span class="comment">     *        can represent anything you like.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> the value returned from &#123;<span class="doctag">@link</span> #tryRelease&#125;</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">release</span><span class="params">(<span class="keyword">int</span> arg)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (tryRelease(arg)) &#123;</span><br><span class="line">            Node h = head;</span><br><span class="line">            <span class="keyword">if</span> (h != <span class="keyword">null</span> &amp;&amp; h.waitStatus != <span class="number">0</span>)</span><br><span class="line">                unparkSuccessor(h);</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure></p>
 <p>tryRelease方法为ReentrantLock中的Sync的tryRelease方法：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">tryRelease</span><span class="params">(<span class="keyword">int</span> releases)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">int</span> c = getState() - releases;</span><br><span class="line">            <span class="keyword">if</span> (Thread.currentThread() != getExclusiveOwnerThread())</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalMonitorStateException();</span><br><span class="line">            <span class="keyword">boolean</span> free = <span class="keyword">false</span>;</span><br><span class="line">            <span class="keyword">if</span> (c == <span class="number">0</span>) &#123;</span><br><span class="line">                free = <span class="keyword">true</span>;</span><br><span class="line">                setExclusiveOwnerThread(<span class="keyword">null</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            setState(c);</span><br><span class="line">            <span class="keyword">return</span> free;</span><br><span class="line">        &#125;</span><br></pre></td></tr></table></figure></p>
-
+<font color="red">ReentrantLock的非公平锁：现有线程与同步队列首部线程争抢锁</font>
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/09/04/深入理解ReentrantLock/" data-id="cisq75flv000inkudo37o47q1" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/09/04/深入理解ReentrantLock/" data-id="cj49du1r5000ol4udhfrfuobc" class="article-share-link">Share</a>
       
       
     </footer>
@@ -185,7 +185,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Archives</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/05/">May 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/03/">March 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2018/10/">October 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/04/">April 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/09/">September 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/07/">July 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/06/">June 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/01/">January 2016</a></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/06/">June 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/05/">May 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/03/">March 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2018/10/">October 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/04/">April 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/09/">September 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/07/">July 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/06/">June 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/01/">January 2016</a></li></ul>
     </div>
   </div>
 
@@ -198,23 +198,23 @@
       <ul>
         
           <li>
+            <a href="/lfhboke.github.io/2019/06/20/Collections解读/">Collections解读</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/06/18/Java并发之AQS详解/">Java并发之AQS详解</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/06/17/Java并发工具类之LongAdder/">Java并发工具类之LongAdder</a>
+          </li>
+        
+          <li>
             <a href="/lfhboke.github.io/2019/05/22/redis之LRU算法/">redis之LRU算法</a>
           </li>
         
           <li>
             <a href="/lfhboke.github.io/2019/05/22/java8新特性/">java8新特性</a>
-          </li>
-        
-          <li>
-            <a href="/lfhboke.github.io/2019/03/01/流计算框架之storm（基础篇）/">流计算框架之storm（基础篇）</a>
-          </li>
-        
-          <li>
-            <a href="/lfhboke.github.io/2018/10/13/消息中间件之kafka-原理篇/">消息中间件之kafka(原理篇)</a>
-          </li>
-        
-          <li>
-            <a href="/lfhboke.github.io/2018/10/13/消息中间件之kafka-基础篇/">消息中间件之kafka(基础篇)</a>
           </li>
         
       </ul>
@@ -229,7 +229,7 @@
   
   <div class="outer">
     <div id="footer-info" class="inner">
-      &copy; 2016 lfhu<br>
+      &copy; 2017 lfhu<br>
       Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
     </div>
   </div>

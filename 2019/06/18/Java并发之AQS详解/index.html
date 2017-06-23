@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="utf-8">
+  
+
+  
+  <title>Java并发之AQS详解 | lfh&#39;s bokes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="概述AbstractQueuedSynchronizer（抽象的队列式的同步器），AQS定义了一套多线程访问共享资源的同步器框架，许多同步类实现都依赖于它，如常用的ReentrantLock/Semaphore/CountDownLatch。 框架它维护了一个volatile int state（代表共享资源）和一个FIFO线程等待队列（多线程争用资源被阻塞时会进入此队列）。这里volatile是">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Java并发之AQS详解">
+<meta property="og:url" content="https://linfordhu.github.io/lfhboke.github.io/2019/06/18/Java并发之AQS详解/index.html">
+<meta property="og:site_name" content="lfh&#39;s bokes">
+<meta property="og:description" content="概述AbstractQueuedSynchronizer（抽象的队列式的同步器），AQS定义了一套多线程访问共享资源的同步器框架，许多同步类实现都依赖于它，如常用的ReentrantLock/Semaphore/CountDownLatch。 框架它维护了一个volatile int state（代表共享资源）和一个FIFO线程等待队列（多线程争用资源被阻塞时会进入此队列）。这里volatile是">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/aqs1.PNG">
+<meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/head.PNG">
+<meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/head2.PNG">
+<meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/head3.PNG">
+<meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/signal.PNG">
+<meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/signal1.PNG">
+<meta property="og:updated_time" content="2017-06-23T03:42:46.482Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Java并发之AQS详解">
+<meta name="twitter:description" content="概述AbstractQueuedSynchronizer（抽象的队列式的同步器），AQS定义了一套多线程访问共享资源的同步器框架，许多同步类实现都依赖于它，如常用的ReentrantLock/Semaphore/CountDownLatch。 框架它维护了一个volatile int state（代表共享资源）和一个FIFO线程等待队列（多线程争用资源被阻塞时会进入此队列）。这里volatile是">
+<meta name="twitter:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/aqs1.PNG">
+  
+    <link rel="alternate" href="/lfhboke.github.io/atom.xml" title="lfh&#39;s bokes" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link rel="stylesheet" href="/lfhboke.github.io/css/style.css">
+</head>
+</html>
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/lfhboke.github.io/" id="logo">lfh&#39;s bokes</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/">Home</a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/lfhboke.github.io/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://linfordhu.github.io/lfhboke.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-Java并发之AQS详解" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2019/06/18/Java并发之AQS详解/" class="article-date">
+  <time datetime="2019-06-18T15:10:58.000Z" itemprop="datePublished">2019-06-18</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      Java并发之AQS详解
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h3 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h3><p>AbstractQueuedSynchronizer（抽象的队列式的同步器），AQS定义了一套多线程访问共享资源的同步器框架，许多同步类实现都依赖于它，如常用的ReentrantLock/Semaphore/CountDownLatch。</p>
+<h3 id="框架"><a href="#框架" class="headerlink" title="框架"></a>框架</h3><p><img src="/lfhboke.github.io/css/images/aqs1.PNG" alt="aqs1"><br>它维护了一个volatile int state（代表共享资源）和一个FIFO线程等待队列（多线程争用资源被阻塞时会进入此队列）。这里volatile是核心关键词。state的访问方式有三种：</p>
+<ol>
+<li>getState()</li>
+<li>setState()</li>
+<li>compareAndSetState()<br>AQS定义两种资源共享方式：Exclusive（独占，只有一个线程能执行，如ReentrantLock）和Share（共享，多个线程可同时执行，如Semaphore/CountDownLatch）。</li>
+</ol>
+<p>不同的自定义同步器争用共享资源的方式也不同。自定义同步器在实现时只需要实现共享资源state的获取与释放方式即可，至于具体线程等待队列的维护，AQS已经在顶层实现好了。自定义同步器实现时主要实现以下几种方法：</p>
+<ol>
+<li>isHeldExclusively()：该线程是否正在独占资源。只有用到condition才需要去实现它。</li>
+<li>tryAcquire(int)：独占方式。尝试获取资源，成功则返回true，失败则返回false。</li>
+<li>tryRelease(int)：共享方式。尝试释放资源，成功则返回true，失败则返回false。</li>
+<li>tryAcquireShared(int)：共享方式。尝试获取资源。负数表示失败；0表示成功，但没有剩余可用资源；正数表示成功，且有剩余资源。</li>
+<li>tryReleaseShared(int)：共享方式。尝试释放资源，如果释放后允许唤醒后续等待结点返回true，否则返回false。<h3 id="设计与结构"><a href="#设计与结构" class="headerlink" title="设计与结构"></a>设计与结构</h3><h4 id="设计思想"><a href="#设计思想" class="headerlink" title="设计思想"></a>设计思想</h4>同步器的核心方法是acquire和release操作，其背后的思想也比较简洁明确。acquire操作是这样的：while (当前同步器的状态不允许获取操作) {<br> 如果当前线程不在队列中，则将其插入队列阻塞当前线程<br>}</li>
+</ol>
+<p>如果线程位于队列中，则将其移出队列</p>
+<p>release操作是这样的：</p>
+<p>更新同步器的状态</p>
+<p>if(新的状态允许某个被阻塞的线程获取成功)</p>
+<pre><code>接触队列中一个或多个线程的阻塞状态
+</code></pre><p>从这两个操作中的思想中我们可以提取三大关键操作：同步器的状态变更、线程阻塞和释放、插入和移出队列。所以为了实现这两个操作，需要协调三大关键操作引申出来的三个基本组件：</p>
+<ol>
+<li>同步器状态的原子性管理；</li>
+<li>线程阻塞与解除阻塞；</li>
+<li>队列的管理；<h5 id="同步状态"><a href="#同步状态" class="headerlink" title="同步状态"></a>同步状态</h5>AQS类使用单个int（32位）来保存同步状态，并暴露出getState、setState以及compareAndSetState操作来读取和更新这个同步状态。其中属性state被声明为volatile，并且通过使用CAS指令来实现compareAndSetState，使得当且仅当同步状态拥有一个一致的期望值的时候，才会被原子地设置成新值，这样就达到了同步状态的原子性管理，确保了同步状态的原子性、可见性和有序性。</li>
+</ol>
+<p>基于AQS的具体实现类必须根据暴露出的状态相关的方法定义tryAcquire和tryRelease方法，以控制acquire和release操作。当同步状态满足时，tryAcquire方法必须返回true，而当新的同步状态允许后续acquire时，tryRelease方法也必须返回true。这些方法都接受一个int类型的参数用于传递想要的状态。</p>
+<h5 id="阻塞"><a href="#阻塞" class="headerlink" title="阻塞"></a>阻塞</h5><p>直到JSR166，阻塞线程和解除线程阻塞都是基于Java的内置管程，没有其它非基于Java内置管程的API可以用来达到阻塞线程和解除线程阻塞。唯一可以选择的是Thread.suspend和Thread.resume，但是它们都有无法解决的竞态问题，所以也没法用。</p>
+<p>juc locks包提供了LockSupport类来解决这个问题。方法LockSupport.park阻塞当前线程直到有个LockSupport.unpark方法被调用。unpark的调用是没有被计数的，因此在一个park调用前多次调用unpark方法只会解除一个park操作。另外，它们作用于每个线程而不是每个同步器。一个线程在一个新的同步器上调用park操作可能会立即返回，因为在此之前可以有多余的unpark操作。但是，在缺少一个unpark操作时，下一次调用park就会阻塞。虽然可以显式地取消多余的unpark调用，但并不值得这样做。在需要的时候多次调用park会更高效。park方法同样支持可选的相对或绝对的超时设置，以及与JVM的Thread.interrupt结合，可通过中断来unpark一个线程。</p>
+<h5 id="队列"><a href="#队列" class="headerlink" title="队列"></a>队列</h5><p>整个框架的核心就是如何管理线程阻塞队列，该队列是严格的FIFO队列，因此不支持线程优先级的同步。同步队列的最佳选择是自身没有使用底层锁来构造的非阻塞数据结构，业界主要有两种选择，一种是MCS锁，另一种是CLH锁。其中CLH一般用于自旋，但是相比MCS，CLH更容易实现取消和超时，所以同步队列选择了CLH作为实现的基础。</p>
+<p>CLH队列实际并不那么像队列，它的出队和入队与实际的业务使用场景密切相关。它是一个链表队列，通过AQS的两个字段head(头节点)和tail(尾节点)来存取，这两个字段是volatile类型，初始化的时候都指向了一个空节点。<br><img src="/lfhboke.github.io/css/images/head.PNG" alt="head"><br>入队操作：CLH队列是FIFO队列，故新的节点到来的时候，是要插入到当前队列的尾节点之后。试想一下哎，当一个线程成功地获取了同步状态，其他线程将无法获取到同步状态，转而被构造成为节点并加入到同步队列中，而这个加入队列的过程必须要保证线程安全，因此同步器提供了一个CAS方法，它需要传递当前线程“认为”的尾节点和当前节点，只有设置成功后，当前节点才正式与之前的尾节点建立关联。入队操作示意图大致如下：<br><img src="/lfhboke.github.io/css/images/head2.PNG" alt="head2"><br>出队操作：因为遵循FIFO规则，所以能成功获取到AQS同步状态的必定是首节点，首节点的线程在释放同步状态时，会唤醒后续节点，而后续节点会在获取AQS同步状态成功的时候将自己设置为首节点。设置首节点是由获取同步成功的线程来完成的，由于只能有一个线程可以获取到同步状态，所以设置首节点的方法不需要像入队这样的CAS操作，只需要将首节点设置为原首节点的后续节点同时断开原节点、后续节点同时断开原节点、后续节点的引用即可。出队示意图如下：<br><img src="/lfhboke.github.io/css/images/head3.PNG" alt="head3"></p>
+<h5 id="条件队列"><a href="#条件队列" class="headerlink" title="条件队列"></a>条件队列</h5><p>其实是AQS的同步队列，这一节的队列是条件队列，队列的管理除了有同步队列，还有条件队列。AQS只有一个同步队列，但是可以有多个条件队列。AQS框架提供了一个ConditionObject类，给维护独占同步的类以及实现Lock接口的类使用。</p>
+<p>ConditionObject类实现了Condition接口，Condition接口提供了类似Object管程式的方法，如await、signal和signal All操作，还扩展了带有超时、检测和监控的方法。ConditionObject类有效地将条件与其他同步操作结合到了一起。该类只支持Java风格的管程访问规则，这些规则中，当且仅当当前线程持有锁且要操作的条件（condition）属于该锁时，条件操作才是合法的。这样，一个ConditionObject关联到一个ReentrantLock上就表现的跟内置的管程一样了。两者不同仅仅在于方法的名称、额外的功能以及用户可以为每个锁声明多个条件。</p>
+<p>ConditionObject类和AQS共用了内部节点，有自己单独的条件队列。signal操作是通过将节点从条件队列转移到同步队列中来实现的，没有必要在需要唤醒的线程重新获取到锁之前将其唤醒。signal操作大致示意图如下：<br><img src="/lfhboke.github.io/css/images/signal.PNG" alt="signal"><br>await操作就是当前线程节点从同步队列进入条件队列进行等待，大致如下：<br><img src="/lfhboke.github.io/css/images/signal1.PNG" alt="signal1"><br>实现这些操作主要复杂在，因超时或Thread.interrupt导致取消了条件等待时，该如何处理。await和signal几乎同时发生就会有竞态问题，最终的结果遵照内置管程相关规范。JSR133修订以后，就要求如果中断发生在signal操作之前，await方法必须在重新获取到锁后，抛出InterruptedException。但是，如果中断发生在signal后，await必须返回且不抛异常，同时设置线程的中断状态。</p>
+<h4 id="方法结构"><a href="#方法结构" class="headerlink" title="方法结构"></a>方法结构</h4><p>大致可以直到AQS的主要数据结构：</p>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>数据结构</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td> 同步状态</td>
+<td>volatile int state</td>
+</tr>
+<tr>
+<td> 阻塞</td>
+<td>LockSupport类</td>
+</tr>
+<tr>
+<td> 队列</td>
+<td>Node节点</td>
+</tr>
+<tr>
+<td> 条件队列</td>
+<td>ConditionObject</td>
+</tr>
+</tbody>
+</table>
+<p> 进而再来看下AQS的主要方法和作用</p>
+<table>
+<thead>
+<tr>
+<th>属性、方法</th>
+<th>描述、作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td> int getState()</td>
+<td>获取当前同步状态</td>
+</tr>
+<tr>
+<td> void setState(int newState)</td>
+<td>设置当前同步状态</td>
+</tr>
+<tr>
+<td> boolean compareAndSetState(int expect, int update)</td>
+<td>通过CAS设置当前状态，此方法保证状态设置的原子性</td>
+</tr>
+<tr>
+<td> boolean tryAcquire(int arg)</td>
+<td>钩子方阿飞，独占式获取同步状态，AQS没有具体实现，具体实现都在子类中，实现此方法需要查询当前同步状态并判断同步状态是否符合预期，然后再CAS设置同步状态</td>
+</tr>
+<tr>
+<td> boolean tryRelease(int arg)</td>
+<td>钩子方法，独占式释放同步状态，AQS没有具体实现，具体实现都在子类中，等待获取同步状态的线程将有机会获取同步状态</td>
+</tr>
+<tr>
+<td> int tryAcquireShared(int arg)</td>
+<td>钩子方法，共享式获取同步状态，AQS没有具体实现，具体实现都在子类中，返回大于等于0的值表示获取成功，反之失败</td>
+</tr>
+<tr>
+<td> boolean tryReleaseShare(int arg)</td>
+<td>钩子方法，共享式释放同步状态，AQS没有具体实现</td>
+</tr>
+<tr>
+<td> boolean isHeldExclusively()</td>
+<td>钩子方法，当前同步器是否在独占模型下被线程占用，一般该方法表示是否被当前线程所独占</td>
+</tr>
+<tr>
+<td> void acquire(int arg)</td>
+<td>模板方法，独占式获取同步状态，如果当前线程获取同步状态成功，则由该方法返回，否则会进入同步队列等待，此方法会调用子类重写的tryAcquire方法</td>
+</tr>
+<tr>
+<td> void acquireInterruptibly(int arg)</td>
+<td>模板方法，与acquire相同，但是此方法可以响应中断，当前线程未获取到同步状态而进入同步队列中，如果当前线程被中断，此方法会抛出InterruptedException并返回</td>
+</tr>
+<tr>
+<td>boolean tryAcquireNanos(int arg, long nanosTimeout)</td>
+<td>模板方法，在acquireInterryptibly基础上增加了超时限制，如果当前线程在超时时间内没有获取到同步状态，则会返回false，如果获取到了则会返回true</td>
+</tr>
+<tr>
+<td>boolean release(int arg)</td>
+<td>模板方法，独占式的释放同步状态，该方法会在释放同步状态后，将同步队列中的第一个节点包含的线程唤醒</td>
+</tr>
+<tr>
+<td>void acquireShared(int arg)</td>
+<td>模板方法，共享式的获取同步状态，如果当前系统未获取到同步状态，将会进入同步队列等待，与acquire的主要区别在于同一时刻可以有多个线程获取到同步状态</td>
+</tr>
+<tr>
+<td>void acquireSharedInterruptibly(int arg)</td>
+<td>模板方法，与acquireShared一致，但是可以响应中断</td>
+</tr>
+<tr>
+<td>boolean tryAcquireSharedNanos(int arg, long nanosTimeout)</td>
+<td>模板方法，在acquireSharedInterruptibly基础上增加了超时限制</td>
+</tr>
+<tr>
+<td>boolean releaseShared(int arg)</td>
+<td>模板方法，共享式的释放同步状态</td>
+</tr>
+<tr>
+<td>Collection\&lt;Thread> getQueuedThreads()</td>
+<td>模板方法，获取等待在同步队列上的线程集合</td>
+</tr>
+<tr>
+<td>Node int waitStatus</td>
+<td>等待状态</td>
+</tr>
+<tr>
+<td>Node prev</td>
+<td>前驱节点，当节点加入同步队列时被设置</td>
+</tr>
+<tr>
+<td>Node next</td>
+<td>后续节点</td>
+</tr>
+<tr>
+<td>Thread thread</td>
+<td>获取同步状态的线程</td>
+</tr>
+<tr>
+<td>Node nextWaiter</td>
+<td>条件队列中的后续节点，如果当前节点是共享的，那么这个字段将是一个SHARED变量，也就是说节点类型和条件队列中的后续节点共用同一个字段</td>
+</tr>
+<tr>
+<td>LockSupport void park()</td>
+<td>阻塞当前线程，如果调用unpark方法或者当前线程被中断，才能从park方法返回</td>
+</tr>
+<tr>
+<td>LockSupport void unpark(Thread thread)</td>
+<td>唤醒处于阻塞状态的线程</td>
+</tr>
+<tr>
+<td>ConditionObject Node firstWaiter</td>
+<td>条件队列首节点</td>
+</tr>
+<tr>
+<td>ConditionObject Node lastWaiter</td>
+<td>条件队列尾节点</td>
+</tr>
+<tr>
+<td>void await()</td>
+<td>当前线程进入等待状态直到signal或中断，当前线程将进入运行状态且从await方法返回的情况，包括：其他线程调用该Condition的signal或者signalAll方法，且当前线程被选中唤醒；其他线程调用interrupt方法中断当前线程；如果当前线程从await方法返回表明该现层已经获取了Condition对象对应的锁</td>
+</tr>
+<tr>
+<td>void awaitUninterruptibly()</td>
+<td>和await方法类似，但是中断不敏感</td>
+</tr>
+<tr>
+<td>long awaitNanos(long nanosTimeout)</td>
+<td>当前线程进入等待状态直到被signal、中断或者超时。返回值表示剩余的时间。</td>
+</tr>
+<tr>
+<td>boolean awaitUntil(Date deadline)</td>
+<td>当前线程进入等待状态直到被signal、中断或者某个时间。如果没有到指定时间就被通知，方法返回true，否则表示到了指定时间，返回false</td>
+</tr>
+<tr>
+<td>void signal()</td>
+<td>唤醒一个等待在Condition上的线程，该线程从等待方法返回前必须获得与Condition相关联的锁</td>
+</tr>
+<tr>
+<td>void signalAll()</td>
+<td>唤醒所有等待在Condition上的线程，能够从等待方法返回的线程必须获得与Condition相关联的锁</td>
+</tr>
+</tbody>
+</table>
+<h3 id="AQS的源代码实现"><a href="#AQS的源代码实现" class="headerlink" title="AQS的源代码实现"></a>AQS的源代码实现</h3><p>主要通过独占式同步状态的获取和释放、共享式同步状态的获取和释放。</p>
+<h4 id="独占式同步状态的获取和释放"><a href="#独占式同步状态的获取和释放" class="headerlink" title="独占式同步状态的获取和释放"></a>独占式同步状态的获取和释放</h4><p>独占式同步状态调用的方法是acquire，代码如下<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">acquire</span><span class="params">(<span class="keyword">int</span> arg)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">if</span>( !tryAcquire(arg) &amp;&amp; acquireQueued( addWaiter( Node.EXCLUSIVE ), arg ) )</span><br><span class="line">    	selfInterrupt();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>上述代码主要完成了同步状态获取、节点构造、加入同步队列以及在同步队列中自旋等待的相关工作，其主要逻辑是：首先调用子类实现的tryAcquire方法，该方法保证线程安全的获取同步状态，如果同步状态获取失败，则构造独占式同步节点（同一时刻只能有一个线程成功获取同步状态）并通过addWaiter方法将该节点加入到同步队列的尾部，最后调用acquireQueued方法，使得该节点以自旋的方式获取同步状态。如果获取不到则阻塞节点中的线程，而被阻塞线程的唤醒主要依靠前驱节点的出队或阻塞线程被中断来实现。</p>
+<p>下面来首先看下节点构造和加入同步队列是如何实现的。代码如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> Node <span class="title">addWaiter</span><span class="params">(Node mode)</span> </span>&#123;</span><br><span class="line">	<span class="comment">//当前线程构造成Node节点</span></span><br><span class="line">    Node node = <span class="keyword">new</span> Node(Thread.currentThread(), mode);</span><br><span class="line">    <span class="comment">//尝试快速在尾节点后新增节点提升算法效率 先将尾节点指向pred</span></span><br><span class="line">    Node pred = tail;</span><br><span class="line">    <span class="keyword">if</span>(pred != <span class="keyword">null</span>) &#123;</span><br><span class="line">    	<span class="comment">//尾节点不为空 当前线程节点的前驱节点指向尾节点</span></span><br><span class="line">        Node.prev = pred;</span><br><span class="line">        <span class="comment">//并发处理 尾节点有可能已经不是之前的节点，所以需要CAS更新</span></span><br><span class="line">        <span class="keyword">if</span>( compareAndSetTail(pred, node) ) &#123;</span><br><span class="line">        	<span class="comment">//CAS更新成功 当前线程为尾节点 原先尾节点的后续节点就是当前节点</span></span><br><span class="line">            pred.next = node;</span><br><span class="line">            <span class="keyword">return</span> node;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//第一个入队的节点或者是尾节点后续节点新增失败时进入enq</span></span><br><span class="line">    enq(node);</span><br><span class="line">    <span class="keyword">return</span> node;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> Node <span class="title">enq</span><span class="params">(<span class="keyword">final</span> Node node)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">for</span>(;;) &#123;</span><br><span class="line">    	Node t = tail;</span><br><span class="line">        <span class="keyword">if</span>( t == <span class="keyword">null</span> ) &#123;</span><br><span class="line">        	<span class="comment">//尾节点为空 第一次入队 设置头尾节点一致 同步队列的初始化</span></span><br><span class="line">            <span class="keyword">if</span>(compareAndSetHead( <span class="keyword">new</span> Node() )) &#123;</span><br><span class="line">            	tail = head;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            	<span class="comment">//所有线程节点在构造完第一个节点后 依次加入到同步队列中</span></span><br><span class="line">            	node.prev = t;</span><br><span class="line">                <span class="keyword">if</span> ( compareAndSetTail(t, node) ) &#123;</span><br><span class="line">                	t.next = node;</span><br><span class="line">                    <span class="keyword">return</span> t;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>节点进入同步队列之后，就进入了一个自旋的过程，每个线程节点都在自省地观察，当条件满足，获取到了同步状态，就可以从这个自旋过程中退出，否则依旧留在这个自旋过程中并会阻塞节点的线程，代码如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">acquireQueued</span><span class="params">(<span class="keyword">final</span> Node node, <span class="keyword">int</span> arg)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">boolean</span> failed = <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">try</span>&#123;</span><br><span class="line">    	<span class="keyword">boolean</span> interrupted = <span class="keyword">false</span>;</span><br><span class="line">        <span class="keyword">for</span>(;;) &#123;</span><br><span class="line">        	<span class="comment">//获取当前线程节点的前驱节点</span></span><br><span class="line">            <span class="keyword">final</span> Node p = node.predecessor();</span><br><span class="line">            <span class="comment">//前驱节点为头节点且成功获取同步状态</span></span><br><span class="line">            <span class="keyword">if</span>( p == head &amp;&amp; tryAcquire(arg) ) &#123;</span><br><span class="line">            	<span class="comment">//设置当前节点为头节点</span></span><br><span class="line">                setHead(node);</span><br><span class="line">                <span class="comment">//help GC</span></span><br><span class="line">                p.next = <span class="keyword">null</span>;</span><br><span class="line">                failed = <span class="keyword">false</span>;</span><br><span class="line">                <span class="keyword">return</span> interrupted;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">//是否阻塞</span></span><br><span class="line">            <span class="keyword">if</span>(shouldParkAfterFailedAcquire(p, node)  &amp;&amp; parkAndCheckInterrupt())</span><br><span class="line">            	interrupted = <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;<span class="keyword">finally</span>&#123;</span><br><span class="line">    	<span class="keyword">if</span>(failed) &#123;</span><br><span class="line">        	cancelAcquire(node);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>再来看看shouldParkAfterFailedAcquire和parkAndCheckInterrupt是怎么来阻塞当前线程的，代码如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">shouldParkAfterFailedAcquire</span><span class="params">(Node pred, Node node)</span> </span>&#123;</span><br><span class="line">	<span class="comment">//前驱节点的状态决定后续节点的行为</span></span><br><span class="line">    <span class="keyword">int</span> ws = pred.waitStatus;</span><br><span class="line">    <span class="keyword">if</span>(ws = Node.SIGNAL) &#123;</span><br><span class="line">    	<span class="comment">//前驱节点为-1，后续节点可以被阻塞</span></span><br><span class="line">    	<span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125; </span><br><span class="line">    <span class="keyword">if</span>(ws &gt; <span class="number">0</span>) &#123;</span><br><span class="line">    	<span class="keyword">do</span>&#123;</span><br><span class="line">        	node.prev = pred = pred.prev;</span><br><span class="line">        &#125; <span class="keyword">while</span> ( pred.waitStatus &gt; <span class="number">0</span> );</span><br><span class="line">        pred.next = node;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    	<span class="comment">//当前节点是初始或者共享状态就设置为-1，使后续节点阻塞</span></span><br><span class="line">        compareAndSetWaitStatus(pred, ws, Node.SIGNAL);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">parkAndCheckInterrupt</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	<span class="comment">//阻塞线程</span></span><br><span class="line">    LockSupport.park(<span class="keyword">this</span>);</span><br><span class="line">    <span class="keyword">return</span> Thread.interrupted();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>当同步状态获取成功之后，当前线程从acquire方法返回，对于锁这种并发组建而言，就意味着当前线程获取了锁。有获取同步状态的方法，就存在其对应的释放方法，该方法为release，现在来看下这个方法的实现，代码如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">release</span><span class="params">(<span class="keyword">int</span> arg)</span> </span>&#123;</span><br><span class="line">	<span class="comment">// 同步状态释放成功</span></span><br><span class="line">	<span class="keyword">if</span>( tryReleas(arg) ) &#123;</span><br><span class="line">    	Node h = head;</span><br><span class="line">        <span class="keyword">if</span>( h != <span class="keyword">null</span> &amp;&amp; h.waitStatus != <span class="number">0</span> ) &#123;</span><br><span class="line">        	<span class="comment">//直接释放头节点</span></span><br><span class="line">            unparkSuccessor(h);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">unparkSuccessor</span><span class="params">( Node node )</span> </span>&#123;</span><br><span class="line">	<span class="keyword">int</span> ws = node.waitStatus;</span><br><span class="line">    <span class="keyword">if</span>(ws &lt; <span class="number">0</span>)</span><br><span class="line">    	compareAndSetWaitStatus(node, ws, <span class="number">0</span>);</span><br><span class="line">    <span class="comment">//寻找符合条件的后续节点</span></span><br><span class="line">    Node s = node.next;</span><br><span class="line">    <span class="keyword">if</span>(s == <span class="keyword">null</span> || s.waitStatus &gt; <span class="number">0</span>) &#123;</span><br><span class="line">    	s = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">for</span>(Node t = tail; t!= <span class="keyword">null</span> &amp;&amp; t!= node; t=t.prev)</span><br><span class="line">        	<span class="keyword">if</span>(t.waitStatus &lt;= <span class="number">0</span>)</span><br><span class="line">            	s=t;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span>(s!=<span class="keyword">null</span>)</span><br><span class="line">    	<span class="comment">//唤醒后续节点</span></span><br><span class="line">        LockSupport.unpark(s.thread);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>独占式释放四非常简单而且明确的。</p>
+<p>总结：在获取同步状态时，同步器维护一个同步队列，获取状态失败的线程都会被加入到队列中并在队列中进行自旋；移出队列的条件是前驱节点为头节点且成功获取了同步状态。在释放同步状态时，同步器调用tryRelease方法释放同步状态，然后唤醒头节点的后继节点。</p>
+<h4 id="共享式同步状态的获取和释放"><a href="#共享式同步状态的获取和释放" class="headerlink" title="共享式同步状态的获取和释放"></a>共享式同步状态的获取和释放</h4><p>共享式同步状态调用的方法是acquireShared，代码如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">acquireShared</span><span class="params">(<span class="keyword">int</span> arg)</span> </span>&#123;</span><br><span class="line">	<span class="comment">//获取同步状态的返回值大于等于0时表示可以获取同步状态</span></span><br><span class="line">    <span class="comment">//小于0表示可以获取步到同步状态，需要进入队列等待</span></span><br><span class="line">    <span class="keyword">if</span>(tryAcquireShared(arg) &lt; <span class="number">0</span>)</span><br><span class="line">    	doAcquireShared(arg);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">doAcquireShared</span><span class="params">(<span class="keyword">int</span> arg)</span> </span>&#123;</span><br><span class="line">	<span class="comment">//独占式一样的入队操作</span></span><br><span class="line">    <span class="keyword">final</span> Node node = addWaiter(Node.SHARED);</span><br><span class="line">    <span class="keyword">boolean</span> failed = <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">try</span>&#123;</span><br><span class="line">    	<span class="keyword">boolean</span> failed = <span class="keyword">true</span>;</span><br><span class="line">        <span class="comment">//自旋</span></span><br><span class="line">        <span class="keyword">for</span>(;;) &#123;</span><br><span class="line">        	<span class="keyword">final</span> Node p = node.predecessor();</span><br><span class="line">            <span class="keyword">if</span>(p == head) &#123;</span><br><span class="line">            	<span class="keyword">int</span> r = tryAcquireShared(arg);</span><br><span class="line">                <span class="keyword">if</span>(r &gt;= <span class="number">0</span>)&#123;</span><br><span class="line">                	<span class="comment">//前驱节点为头节点且成功获取同步状态 可退出自旋</span></span><br><span class="line">                    setHeadAndPropagate(node, r);</span><br><span class="line">                    p.next = <span class="keyword">null</span>;</span><br><span class="line">                    <span class="keyword">if</span> (interrupted) </span><br><span class="line">                    	selfInterrupt();</span><br><span class="line">                    failed = <span class="keyword">false</span>;</span><br><span class="line">                    <span class="keyword">return</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span>(shouldParkAfterFailedAcquire(p, node) &amp;&amp; parkAndCheckInterrupt())</span><br><span class="line">            interrupted = <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;<span class="keyword">finally</span>&#123;</span><br><span class="line">    	<span class="keyword">if</span>(failed)</span><br><span class="line">        	cancelAcquire(node);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">setHeadAndPropagate</span><span class="params">(Node node, <span class="keyword">int</span> propagate)</span> </span>&#123;</span><br><span class="line">	Node h = head;</span><br><span class="line">    setHead(node);</span><br><span class="line">    <span class="keyword">if</span>(propagate &gt; <span class="number">0</span> || h == <span class="keyword">null</span> || h.waitStatus &lt; <span class="number">0</span>) &#123;</span><br><span class="line">    	Node s = node.next;</span><br><span class="line">        <span class="keyword">if</span>(s == <span class="keyword">null</span> || s.isShared()) &#123;</span><br><span class="line">        	doReleaseShared();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>共享式获取也需要释放同步状态<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">releaseShared</span><span class="params">(<span class="keyword">int</span> arg)</span> </span>&#123;</span><br><span class="line">	<span class="comment">//释放同步状态</span></span><br><span class="line">    <span class="keyword">if</span>(tryReleaseShared(arg)) &#123;</span><br><span class="line">    	<span class="comment">//唤醒后续等待的节点</span></span><br><span class="line">        doRleaseShared();</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">doReleaseShared</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	<span class="comment">//自旋</span></span><br><span class="line">    <span class="keyword">for</span>(;;) &#123;</span><br><span class="line">    	Node h = head;</span><br><span class="line">        <span class="keyword">if</span>(h != <span class="keyword">null</span> &amp;&amp; h != tail) &#123;</span><br><span class="line">        	<span class="keyword">int</span> ws = h.waitStatus;</span><br><span class="line">            <span class="keyword">if</span>(ws == Node.SIGNAL) &#123;</span><br><span class="line">            	<span class="keyword">if</span>(!compareAndSetWaitStatus(h, Node.SIGNAL, <span class="number">0</span>))</span><br><span class="line">                	<span class="keyword">continue</span>;</span><br><span class="line">                <span class="comment">//唤醒后续节点</span></span><br><span class="line">                unparkSuccessor(h);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">else</span> <span class="keyword">if</span>(ws == <span class="number">0</span> &amp;&amp; !compareAndSetWaitStatus(h, <span class="number">0</span>, NodePROPAGATE))</span><br><span class="line">            	<span class="keyword">continue</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span>(h == head) </span><br><span class="line">         <span class="keyword">break</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/06/18/Java并发之AQS详解/" data-id="cj49du1qo000nl4udauxi5num" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/lfhboke.github.io/2019/06/20/Collections解读/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          Collections解读
+        
+      </div>
+    </a>
+  
+  
+    <a href="/lfhboke.github.io/2019/06/17/Java并发工具类之LongAdder/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">Java并发工具类之LongAdder</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/06/">June 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/05/">May 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/03/">March 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2018/10/">October 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/04/">April 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/09/">September 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/07/">July 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/06/">June 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/01/">January 2016</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/06/20/Collections解读/">Collections解读</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/06/18/Java并发之AQS详解/">Java并发之AQS详解</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/06/17/Java并发工具类之LongAdder/">Java并发工具类之LongAdder</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/05/22/redis之LRU算法/">redis之LRU算法</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/05/22/java8新特性/">java8新特性</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2017 lfhu<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/lfhboke.github.io/" class="mobile-nav-link">Home</a>
+  
+    <a href="/lfhboke.github.io/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/lfhboke.github.io/fancybox/jquery.fancybox.css">
+  <script src="/lfhboke.github.io/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/lfhboke.github.io/js/script.js"></script>
+
+
+
+  </div>
+</body>
+</html>
