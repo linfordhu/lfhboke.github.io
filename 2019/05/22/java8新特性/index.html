@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="utf-8">
+  
+
+  
+  <title>java8新特性 | lfh&#39;s bokes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="Lambda表达式。 接口的默认方法与静态方法：在接口中定义默认方法，使用default关键字，并提供默认的实现。 方法引用：  通常与Lambda表达式联合使用，可以直接引用已有Java类或对象的方法。一般有四种不同的方法引用：  构造器引用。语法式Class::new，或者更一般的Class::new，要求构造器方法是没有参数； 静态方法引用。语法是Class::static_method，">
+<meta property="og:type" content="article">
+<meta property="og:title" content="java8新特性">
+<meta property="og:url" content="https://linfordhu.github.io/lfhboke.github.io/2019/05/22/java8新特性/index.html">
+<meta property="og:site_name" content="lfh&#39;s bokes">
+<meta property="og:description" content="Lambda表达式。 接口的默认方法与静态方法：在接口中定义默认方法，使用default关键字，并提供默认的实现。 方法引用：  通常与Lambda表达式联合使用，可以直接引用已有Java类或对象的方法。一般有四种不同的方法引用：  构造器引用。语法式Class::new，或者更一般的Class::new，要求构造器方法是没有参数； 静态方法引用。语法是Class::static_method，">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2019-05-22T01:28:25.153Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="java8新特性">
+<meta name="twitter:description" content="Lambda表达式。 接口的默认方法与静态方法：在接口中定义默认方法，使用default关键字，并提供默认的实现。 方法引用：  通常与Lambda表达式联合使用，可以直接引用已有Java类或对象的方法。一般有四种不同的方法引用：  构造器引用。语法式Class::new，或者更一般的Class::new，要求构造器方法是没有参数； 静态方法引用。语法是Class::static_method，">
+  
+    <link rel="alternate" href="/lfhboke.github.io/atom.xml" title="lfh&#39;s bokes" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link rel="stylesheet" href="/lfhboke.github.io/css/style.css">
+</head>
+</html>
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/lfhboke.github.io/" id="logo">lfh&#39;s bokes</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/">Home</a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/lfhboke.github.io/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://linfordhu.github.io/lfhboke.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-java8新特性" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2019/05/22/java8新特性/" class="article-date">
+  <time datetime="2019-05-21T23:31:21.000Z" itemprop="datePublished">2019-05-22</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      java8新特性
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <ol>
+<li>Lambda表达式。</li>
+<li>接口的默认方法与静态方法：在接口中定义默认方法，使用default关键字，并提供默认的实现。</li>
+<li><p>方法引用：</p>
+<p> 通常与Lambda表达式联合使用，可以直接引用已有Java类或对象的方法。一般有四种不同的方法引用：</p>
+<ol>
+<li>构造器引用。语法式Class::new，或者更一般的Class<t>::new，要求构造器方法是没有参数；</t></li>
+<li>静态方法引用。语法是Class::static_method，要求接受一个Class类型的参数；</li>
+<li>特定类的任意对象方法引用。它的语法是Class::method。要求方法没有参数的；</li>
+<li>特定对象的方法引用，它的语法是instance::method。要求方法接受一个参数，与3不同的地方在于，3是在列表元素上分别调用方法，而4是在某个对象上调用方法，将列表元素作为参数传入；</li>
+</ol>
+</li>
+<li><p>重复注解：在Java5中使用注解有一个限制，即相同的注解在同一位置只能声明一次。Java8引入重复注解，这样相同的注解在同一地方也可以声明多次。重复注解机制本身需要用@Repeatable注解。Java8在编译器层做了优化，相同注解会以集合的方式保存，因此底层的原理并没有变化。</p>
+</li>
+<li>扩展注解的支持：Java8扩展了注解的上下文，几乎可以为任何东西添加注解，包括局部变量、泛型类、父类与接口的实现，连方法的异常也能添加注解。</li>
+<li>Optional：Java8引入Optional类来防止空指针异常，Optional类实际上是个容器：它可以保存类型T的值，或者保存null。使用Optional类我们就不用显式进行空指针检查了。</li>
+<li>Stream：Stream API是把真正的函数式编程风格引入到Java中。起始简单来说可以把Stream理解为MapReduce，其实是一连串支持连续、并行聚集操作的元素。从语法上看，也很像Linux的管道、或者链式编程，代码写起来简洁明了。</li>
+<li>Date/TimeAPI：Java8新的Date-TimeAPI受Joda-Time的影响，提供了新的java.time包，可以用来替代java.util.Date和java.util.Calendar。一般会用到Clock、LocaleDate、LocalTime、LocaleDateTime、ZonedDateTime、Duration这些类，对于时间日期的改进还是非常不错的。</li>
+<li>JavaScript引擎Nashorn：Nashorn允许在JVM上开发运行JavaScript应用，允许java与JavaScript相互调用。</li>
+<li>Base64：在Java8中，Base64编码成为了Java类库的标准。</li>
+</ol>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/05/22/java8新特性/" data-id="cj7kizh6r0005y0udoeh8y7v7" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/lfhboke.github.io/2019/03/01/流计算框架之storm（基础篇）/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">流计算框架之storm（基础篇）</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/05/">May 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/03/">March 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2018/10/">October 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/04/">April 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/07/">July 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/06/">June 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/01/">January 2016</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/05/22/java8新特性/">java8新特性</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/03/01/流计算框架之storm（基础篇）/">流计算框架之storm（基础篇）</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2018/10/13/消息中间件之kafka-原理篇/">消息中间件之kafka(原理篇)</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2018/10/13/消息中间件之kafka-基础篇/">消息中间件之kafka(基础篇)</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2017/09/14/Mybatis之SqlSession四大对象/">Mybatis之SqlSession四大对象</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2017 lfhu<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/lfhboke.github.io/" class="mobile-nav-link">Home</a>
+  
+    <a href="/lfhboke.github.io/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/lfhboke.github.io/fancybox/jquery.fancybox.css">
+  <script src="/lfhboke.github.io/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/lfhboke.github.io/js/script.js"></script>
+
+
+
+  </div>
+</body>
+</html>
