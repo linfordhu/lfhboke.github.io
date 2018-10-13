@@ -62,6 +62,250 @@
       <div class="outer">
         <section id="main">
   
+    <article id="post-消息中间件之kafka-原理篇" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2018/10/13/消息中间件之kafka-原理篇/" class="article-date">
+  <time datetime="2018-10-13T13:53:53.000Z" itemprop="datePublished">2018-10-13</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/lfhboke.github.io/2018/10/13/消息中间件之kafka-原理篇/">消息中间件之kafka(原理篇)</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h3 id="kafka架构"><a href="#kafka架构" class="headerlink" title="kafka架构"></a>kafka架构</h3><p><img src="/lfhboke.github.io/2018/10/13/消息中间件之kafka-原理篇/css/images/parentproxy.png" alt="kafka拓扑结构"></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2018/10/13/消息中间件之kafka-原理篇/" data-id="cjn7ivqb50007k4ud77z6ryu0" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-消息中间件之kafka-基础篇" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2018/10/13/消息中间件之kafka-基础篇/" class="article-date">
+  <time datetime="2018-10-13T13:21:22.000Z" itemprop="datePublished">2018-10-13</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/lfhboke.github.io/2018/10/13/消息中间件之kafka-基础篇/">消息中间件之kafka(基础篇)</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>之前已经分析了activeMq，现在开始学习kafka。</p>
+<p>kafka也是消息中间件，但不同的是，它类似于JMS特性，但并不是JMS规范的实现。</p>
+<p>kafka对消息保存时根据Topic进行归类，发送消息者成为Producer，消息接受者成为Consumer，此外kafka集群有多个kafka实例组成，每个实例（server）成为broker。无论是kafka集群，还是producer和consumer都依赖于zookeeper保证系统可用性。kafka是天生的分布式消息，多用于实时性较高的消息消费。</p>
+<h3 id="kafka-java-api"><a href="#kafka-java-api" class="headerlink" title="kafka java api"></a>kafka java api</h3><p>多说无益，直接上代码实际：</p>
+<h4 id="producer源码"><a href="#producer源码" class="headerlink" title="producer源码"></a>producer源码</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ProducerDemo</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</span><br><span class="line">        Properties properties = <span class="keyword">new</span> Properties();</span><br><span class="line">        properties.put(<span class="string">"bootstrap.servers"</span>, <span class="string">"192.168.1.110:9092"</span>);</span><br><span class="line">        properties.put(<span class="string">"acks"</span>, <span class="string">"all"</span>);</span><br><span class="line">        properties.put(<span class="string">"retries"</span>, <span class="number">0</span>);</span><br><span class="line">        properties.put(<span class="string">"batch.size"</span>, <span class="number">16384</span>);</span><br><span class="line">        properties.put(<span class="string">"linger.ms"</span>, <span class="number">1</span>);</span><br><span class="line">        properties.put(<span class="string">"buffer.memory"</span>, <span class="number">33554432</span>);</span><br><span class="line">        properties.put(<span class="string">"key.serializer"</span>, <span class="string">"org.apache.kafka.common.serialization.StringSerializer"</span>);</span><br><span class="line">        properties.put(<span class="string">"value.serializer"</span>, <span class="string">"org.apache.kafka.common.serialization.StringSerializer"</span>);</span><br><span class="line">        Producer&lt;String, String&gt; producer = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            producer = <span class="keyword">new</span> KafkaProducer&lt;String, String&gt;(properties);</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">100</span>; i++) &#123;</span><br><span class="line">                String msg = <span class="string">"Message "</span> + i;</span><br><span class="line">                producer.send(<span class="keyword">new</span> ProducerRecord&lt;String, String&gt;(<span class="string">"HelloWorld"</span>, msg));</span><br><span class="line">                System.out.println(<span class="string">"Sent:"</span> + msg);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line"></span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            producer.close();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="Consumer源码"><a href="#Consumer源码" class="headerlink" title="Consumer源码"></a>Consumer源码</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ConsumerDemo</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</span><br><span class="line">        Properties properties = <span class="keyword">new</span> Properties();</span><br><span class="line">        properties.put(<span class="string">"bootstrap.servers"</span>, <span class="string">"192.168.1.110:9092"</span>);</span><br><span class="line">        properties.put(<span class="string">"group.id"</span>, <span class="string">"group-1"</span>);</span><br><span class="line">        properties.put(<span class="string">"enable.auto.commit"</span>, <span class="string">"true"</span>);</span><br><span class="line">        properties.put(<span class="string">"auto.commit.interval.ms"</span>, <span class="string">"1000"</span>);</span><br><span class="line">        properties.put(<span class="string">"auto.offset.reset"</span>, <span class="string">"earliest"</span>);</span><br><span class="line">        properties.put(<span class="string">"session.timeout.ms"</span>, <span class="string">"30000"</span>);</span><br><span class="line">        properties.put(<span class="string">"key.deserializer"</span>, <span class="string">"org.apache.kafka.common.serialization.StringDeserializer"</span>);</span><br><span class="line">        properties.put(<span class="string">"value.deserializer"</span>, <span class="string">"org.apache.kafka.common.serialization.StringDeserializer"</span>);</span><br><span class="line"></span><br><span class="line">        KafkaConsumer&lt;String, String&gt; kafkaConsumer = <span class="keyword">new</span> KafkaConsumer&lt;&gt;(properties);</span><br><span class="line">        kafkaConsumer.subscribe(Arrays.asList(<span class="string">"HelloWorld"</span>));</span><br><span class="line">        <span class="keyword">while</span> (<span class="keyword">true</span>) &#123;</span><br><span class="line">            ConsumerRecords&lt;String, String&gt; records = kafkaConsumer.poll(<span class="number">100</span>);</span><br><span class="line">            <span class="keyword">for</span> (ConsumerRecord&lt;String, String&gt; record : records) &#123;</span><br><span class="line">                System.out.printf(<span class="string">"offset = %d, value = %s"</span>, record.offset(), record.value());</span><br><span class="line">                System.out.println();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2018/10/13/消息中间件之kafka-基础篇/" data-id="cjn7ivqb70008k4udkhe82qn5" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-消息中间件之ActiveMQ-源码篇" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2017/06/20/消息中间件之ActiveMQ-源码篇/" class="article-date">
+  <time datetime="2017-06-20T00:59:25.000Z" itemprop="datePublished">2017-06-20</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/lfhboke.github.io/2017/06/20/消息中间件之ActiveMQ-源码篇/">消息中间件之ActiveMQ(源码篇（客户端）)</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>ActiveMQ源码分为客户端和服务端，开始分析客户端代码：</p>
+<h3 id="连接服务端"><a href="#连接服务端" class="headerlink" title="连接服务端"></a>连接服务端</h3><p>首先还是贴代码<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ActiveMQConnectionFactory factory = <span class="keyword">new</span> ActiveMQConnectionFactory(username, password, url);</span><br><span class="line">ActiveMQConnection connection = factory.createConnection();</span><br><span class="line">connection.start();</span><br></pre></td></tr></table></figure></p>
+<p>和所有连接服务端差不多，<font color="red">首先通过factory构造方法，获取到连接端url、username、password，接下来创建connection对象，最后建立连接。</font></p>
+<p>好了，从构造函数分析，比较简单：</p>
+<h4 id="ActiveMQConnectionFactory的构造方法"><a href="#ActiveMQConnectionFactory的构造方法" class="headerlink" title="ActiveMQConnectionFactory的构造方法"></a>ActiveMQConnectionFactory的构造方法</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">ActiveMQConnectionFactory</span><span class="params">(String username,String password,URI brokerURL)</span> </span>&#123;</span><br><span class="line">	setUserName(username);</span><br><span class="line">    setPassword(password);</span><br><span class="line">    setBrokerURL(brokerURL.toString());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>其实也就是一些属性的填充，然后构造此工厂对象，此时必要的属性已经有了，接下来，也就是配置connection，也就是factory的createConnection()方法。</p>
+<h4 id="ActiveMQConnectionFactory的createConnection-方法"><a href="#ActiveMQConnectionFactory的createConnection-方法" class="headerlink" title="ActiveMQConnectionFactory的createConnection()方法"></a>ActiveMQConnectionFactory的createConnection()方法</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//建立Transport和通过Transport建立Connection</span></span><br><span class="line">Transport transport = createTransport();</span><br><span class="line">connection = createActiveMQConnection(transport, factoryStates);</span><br><span class="line"><span class="comment">//配置</span></span><br><span class="line">connection.setUserName(userName);</span><br><span class="line">connection.setPassword(password);</span><br><span class="line">configureConnection(connection);</span><br><span class="line"><span class="comment">//启动Transport</span></span><br><span class="line">transport.start();</span><br></pre></td></tr></table></figure>
+<font color="red">configureConnection(connection)</font>这个方法的作用是<font color="red">对实例化出的ActiveMQConnection对象中的参数的一系列配置。</font><br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">TransportFactory</span> </span>&#123;</span><br><span class="line">	</span><br><span class="line">    ...</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> FactoryFinder TRANSPORT_FACTORY_FINDER = <span class="keyword">new</span> FactoryFinder(<span class="string">"META-INF/services/org/apache/activemq/transport"</span>);</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Transport <span class="title">connect</span><span class="params">(URI location)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    	TransportFactory tf = findTransportFactory(location);</span><br><span class="line">        <span class="keyword">return</span> tf.doConnect(location);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> TransportFactory <span class="title">findTransportfactory</span><span class="params">(URI location)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    	<span class="comment">//拆分url</span></span><br><span class="line">        String scheme = location.getScheme();</span><br><span class="line">        <span class="keyword">if</span>(scheme == <span class="keyword">null</span>) &#123;</span><br><span class="line">        	<span class="keyword">throw</span> <span class="keyword">new</span> IOException();</span><br><span class="line">        &#125;</span><br><span class="line">        TransportFactory tf = TRANSPORT_FACTORYS.get(scheme);</span><br><span class="line">        <span class="keyword">if</span>(tf == <span class="keyword">null</span>) &#123;</span><br><span class="line">        	<span class="comment">//调用FactoryFinder找到正确的TransportFactory</span></span><br><span class="line">            <span class="keyword">try</span>&#123;</span><br><span class="line">            	tf = (TransportFactory)TRANSPORT_FACTORY_FINDER.newInstance(scheme);</span><br><span class="line">                TRANSPORT_FACTORYS.put(scheme, tf);</span><br><span class="line">            &#125; <span class="keyword">catch</span>(Throwable e) &#123;</span><br><span class="line">            	<span class="keyword">throw</span> IOExceptionSupport.create();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> tf;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><br><br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FactoryFinder</span> </span>&#123;</span><br><span class="line">	</span><br><span class="line">    ...</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//通过ObjectFactory来找到正确的TransportFactory</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">newInstance</span><span class="params">(String key)</span> <span class="keyword">throws</span> IllegalAccessException... </span>&#123;</span><br><span class="line">    	<span class="keyword">return</span> objectFactory.create(path+key);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    ...</span><br><span class="line">    </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><br><br>AMQ实现了工厂类Factoryfinder，在TransportFactory.connection(url)方法中，先是通过FactoryFinder根据url参数前缀“tcp:”来找到使用的协议工厂TcpTransportFactory，然后使用TcpTransportFactory中的类来进行连接的建立。<br>从代码上看，大致上可以得出这么个流程：<br>1. <font color="red">TransportFactory的connect()调用findTransportFactory方法</font><br>2. <font color="red">findTransportFactory调用FactoryFinder类的newInstance方法</font><br>3. <font color="red">newInstance调用ObjectFactory类的create方法</font><br>4. <font color="red">ObjectFactory是一个接口类，实现类是StandaloneObjectFactory，其中的create方法调用自身的loadClass方法</font><br>5. <font color="red">loadClass方法中最终找到正确的类，返回至TransportFactory中</font><br>6. <font color="red">如果是tcp连接，最终得到的就是一个实例化的TcpTransportFactory类</font>
+
+<p>这边分析到了factory的查找和创建，下面开始分析创建Transport(其实由TransportFactory类的doCreate()方法创建)。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> Transport <span class="title">doConnect</span><span class="params">(URI location)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">	<span class="keyword">try</span>&#123;</span><br><span class="line">    	<span class="comment">//把url里关于Transport的配置提取出来，WireFormat基本都可以看成是url的配置。如果使用Openwire，那么WireFormat就是openwire的相关配置。</span></span><br><span class="line">        Map&lt;String, String&gt; options = <span class="keyword">new</span> HashMap&lt;String, String&gt;(URISupport.parseParameters(location));</span><br><span class="line">        <span class="keyword">if</span>(!options.containsKey(<span class="string">"wireFormat.host"</span>))&#123;</span><br><span class="line">        	options.put(<span class="string">"wireFormat.host"</span>, location.getHost());</span><br><span class="line">        &#125;</span><br><span class="line">        WireFormat wf = createWireFormat(options);</span><br><span class="line">        <span class="comment">//建立socket连接</span></span><br><span class="line">        Transport transport = createTransport(location, wf);</span><br><span class="line">        <span class="comment">//装饰者模式</span></span><br><span class="line">        Transport rc = configure(transport, wf, options);</span><br><span class="line">        <span class="comment">//remove auto</span></span><br><span class="line">        IntrospectionSupport.extractProperties(options, <span class="string">"auto."</span>);</span><br><span class="line">        </span><br><span class="line">        ...</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">return</span> rc</span><br><span class="line">    &#125; <span class="keyword">catch</span>(Exception e) &#123;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>这方法其实就是对于Transport对象的封装并进行服务端的连接：</p>
+<ol>
+<li>配置wireformat</li>
+<li>建立TcpTransport连接</li>
+<li>在连接上包装辅助功能</li>
+</ol>
+<p>这边顺便提一下装饰器方法的四大辅助功能：</p>
+<ol>
+<li>MutexTransportFilter类实现了对每个请求的同步锁，同一时间只允许发送一个请求，如果有第二个请求需要等待第一个请求发送完毕才可以继续发送</li>
+<li>WireFormatNegotiator类实现了在客户端连接broker的时候先发送数据解析相关的协议信息。</li>
+<li>InactivityMonitor类实现了连接成功后启动心跳检查机制，客户端每10秒发送一次心跳信息，服务端每30秒读一次心跳信息，如果没有读到则会断开连接，心跳检测是互相的，客户端也会每30秒读取服务端发送来的心跳信息，如果没有读到也一样会断开连接。</li>
+<li>ResponseCorrelator类实现了异步请求但需要获取响应信息否则就会阻塞等待功能。<h4 id="ActiveMQConnection的Start-方法"><a href="#ActiveMQConnection的Start-方法" class="headerlink" title="ActiveMQConnection的Start()方法"></a>ActiveMQConnection的Start()方法</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">start</span><span class="params">()</span> <span class="keyword">throws</span> JMSException </span>&#123;</span><br><span class="line">	checkClosedOrFailed();</span><br><span class="line">    ensureConnectionInfoSent();</span><br><span class="line">    <span class="keyword">if</span>(started.compareAndSet(<span class="keyword">false</span>, <span class="keyword">true</span>))&#123;</span><br><span class="line">    	<span class="keyword">for</span>(Iterator&lt;ActiveMQSession&gt; i = sessions.iterator(); i.hasNext();) &#123;</span><br><span class="line">        	ActiveMQSession session = i.next();</span><br><span class="line">            session.start();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>start就是启动connection可以接收消息的功能。包含几个步骤：</p>
+<ol>
+<li>检查连接是否关闭或失效</li>
+<li>确认客户端的ConnectionInfo是否被送到服务器</li>
+<li>启动这个Connection中的每一个Session</li>
+</ol>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2017/06/20/消息中间件之ActiveMQ-源码篇/" data-id="cjn7ivqay0006k4ud1m4q7oay" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-消息中间件之ActiveMQ（原理篇）" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2017/06/19/消息中间件之ActiveMQ（原理篇）/" class="article-date">
+  <time datetime="2017-06-19T15:01:32.000Z" itemprop="datePublished">2017-06-19</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/lfhboke.github.io/2017/06/19/消息中间件之ActiveMQ（原理篇）/">消息中间件之ActiveMQ（原理篇）</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>首先先分析一下ActiveMQ的消息存储机制：</p>
+<h3 id="KahaDB"><a href="#KahaDB" class="headerlink" title="KahaDB"></a>KahaDB</h3><p>目前ActiveMQ版本的默认存储方式。KahaDB存储是一个基于文件的快速存储消息，设计目标是使用容易并且尽可能快。<br><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">broker</span> <span class="attr">brokerName</span>=<span class="string">"broker"</span> <span class="attr">...</span> &gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">persistenceAdapter</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">kahaDB</span> <span class="attr">directory</span>=<span class="string">"activemq-data"</span> <span class="attr">journalMaxFileLength</span>=<span class="string">"32mb"</span>/&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">persistenceAdapter</span>&gt;</span></span><br><span class="line">  ...</span><br><span class="line"><span class="tag">&lt;/<span class="name">broker</span>&gt;</span></span><br></pre></td></tr></table></figure></p>
+<p>先看一下实际ActiveMQ的KahaDB存储方式下的数据目录如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">$ ll -s -t -h</span><br><span class="line">total 11M</span><br><span class="line">232K -rw-rw-r-- 1 cdhfive cdhfive 228K Jun 18 09:27 db.data</span><br><span class="line">52K -rw-rw-r-- 1 cdhfive cdhfive 49K Jun 18 09:27 db.redo</span><br><span class="line">9.9M -rw-rw-r-- 1 cdhfive cdhfive 32M Jun 18 09:27 db-5.log</span><br><span class="line">4.0K -rw-rw-r-- 1 cdhfive cdhfive 8 Jun 14 10:37 lock</span><br></pre></td></tr></table></figure>
+<p>解释一下四个文件：</p>
+<ol>
+<li>db.data</li>
+</ol>
+<p>它是消息的索引文件。本质上是B-Tree的实现，使用B-Tree作为索引指向db-*.log里面存储的消息。</p>
+<ol start="2">
+<li>db.redo</li>
+</ol>
+<p>主要用来进行消息恢复。</p>
+<ol start="3">
+<li>db-*.log</li>
+</ol>
+<p>存储消息的内容。对于一个消息而言，不仅仅有消息本身的数据（message data），而且还有（Destinations、订阅关系、事务…）<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">the data logs contain all of the message data and all of the information about destinations,subscriptions,transactions,etc..</span><br></pre></td></tr></table></figure></p>
+<p>data.log以日志形式存储消息，而且<font color="red">新的数据总是以APPEND的方式追加到日志文件末尾。</font>因此，消息的存储是很快的。比如，对于持久化消息，Producer把消息发送给Broker，Broker先把消息存储到磁盘中，然后再向Producer返回Acknowledge。Append方式在一定程度上减少了Broker向Producer返回Acknowledge的时间。</p>
+<ol start="4">
+<li>lock文件</li>
+</ol>
+<p>另外，一些关于KahaDB的配置选项如下：</p>
+<ol>
+<li><p>indexWriteBatchSize 默认值1000，当Metadata Cache中更新的索引到达了1000时，才同步到磁盘上的Metadata Store中。<font color="red">不是每次更新都写磁盘，而是批量更新写磁盘，比较写磁盘的代价是很大的。</font></p>
+</li>
+<li><p>indexCacheSize 默认值10000，(number of index pages cached in memory)，在内存中最多分配个页面来缓存index。缓存的index越多，命中的概率就越大，检索的效率就越高。</p>
+</li>
+<li><p>journalMaxFileLength 默认值32MB，当存储的消息达到32MB时，新建一个新文件来保存消息。这个配置对生产者或消息者的速率有影响。比如，生产者速率很快而消费者速率很慢时，将它配置得大一点比较好。</p>
+</li>
+<li><p>enableJournalDiskSyncs 默认值true，默认采用同步写磁盘，即消息先存储到磁盘中再向Producer返回ACK。</p>
+</li>
+<li><p>cleanupinterval 默认值30000ms，当消息被消息者成功消费之后，Broker就可以将消息删除了。</p>
+</li>
+<li><p>checkpointInterval 默认值5s，每隔5s将内存中index(Metadata Cache)更新到磁盘的Index文件中（Metadata Store）。</p>
+</li>
+</ol>
+<h4 id="kahaDB存储底层实现"><a href="#kahaDB存储底层实现" class="headerlink" title="kahaDB存储底层实现"></a>kahaDB存储底层实现</h4><p>各个部分与KahaDB配置的存储目录下的文件是一一对应的。</p>
+<ol>
+<li>在内存（cache）中的那部分B-Tree是Metadata Cache</li>
+</ol>
+<p>通过将索引缓存到内存中，可以加快查询的速度。但是需要定时将Metadata Cache与Metadata Store同步。</p>
+<p><font color="red">同步过程称为：check point。</font>由上面介绍参数checkpointInterval选项决定每隔多久时间进行一次checkpoint操作。</p>
+<ol start="2">
+<li>BTree Indexs则是保存在磁盘上的，称为Metadata Store，它对应于文件db.data，它就是对Data Logs以B树的形式索引。有了它，Broker（消息服务器）可以快速地重启恢复，因为它是消息的索引，根据它就能恢复每条消息的location。</li>
+</ol>
+<p>如果Metadata Store被损坏，则只能扫描整个Data Logs来重建B树了，这个过程十分缓慢。</p>
+<ol start="3">
+<li>Data Logs则对应于文件db-*.log,默认是32MB</li>
+</ol>
+<p>Data Logs以日志形式存储消息，它是生产者生产的数据的真正载体。</p>
+<ol start="4">
+<li>Redo Log则对应于文件db.redo</li>
+</ol>
+<p>redo log的原理用到了“Double write”。</p>
+<p>下面贴一点代码，关于“Double write”：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> unload <span class="keyword">throws</span> IOException &#123;</span><br><span class="line">	<span class="comment">//load时创建writeFile（db.data）和recoveryFile(db.redo)</span></span><br><span class="line">    writeFile = <span class="keyword">new</span> RecoverableRandomAccessFile(file, <span class="string">"rw"</span>, <span class="keyword">false</span>);</span><br><span class="line">    </span><br><span class="line">    ...</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">if</span>(enableRecoveryFile) &#123;</span><br><span class="line">    	recoveryFile = <span class="keyword">new</span> RecoverableRandomAccessFile(getRecoveryFile(), <span class="string">"rw"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">writeBatch</span><span class="params">()</span> <span class="keyword">throws</span> IOException</span>&#123;</span><br><span class="line">	</span><br><span class="line">    ...</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//数据写入磁盘时，先写到Recovery Buffer中</span></span><br><span class="line">    <span class="keyword">for</span>(PageWrite w: batch) &#123;</span><br><span class="line">    	<span class="keyword">try</span>&#123;</span><br><span class="line">        	checksum.update(w.getDiskBound(), <span class="number">0</span>, pageSize);</span><br><span class="line">        &#125; <span class="keyword">catch</span>(Throwable t) &#123;</span><br><span class="line">        	<span class="keyword">throw</span> IOExceptionSupport.create();</span><br><span class="line">        &#125;</span><br><span class="line">        recoveryFile.writeLong(w.page.getPageId());</span><br><span class="line">        recoveryFile.write(w.getDiskBound(), <span class="number">0</span>, pageSize);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    ...</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//写入真正的目的文件中</span></span><br><span class="line">    <span class="keyword">for</span>(PageWrite w: batch) &#123;</span><br><span class="line">    	writeFile.seek(toOffset(w.page.getPageId()));</span><br><span class="line">        writeFile.write(w.getDiskBound(),<span class="number">0</span>,pageSize);</span><br><span class="line">        w.done();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h3 id="AMQ"><a href="#AMQ" class="headerlink" title="AMQ"></a>AMQ</h3><p>AMQ消息存储是可靠持久性和高性能索引的事务日志组合，当消息吞吐量是应用程序的主要需求时，该存储是最佳选择。但因为它为每个索引使用两个分开的文件，并且每隔Destination都有一个索引。</p>
+<p>与KahaDB类似，主要包括以下几部分：</p>
+<ol>
+<li>Data Logs：作为消息Journal。</li>
+<li>Cache：在消息写入data log后，在内存中保持消息用于快速恢复。</li>
+<li>Reference Store：在journal保存消息的引用，按照消息ID索引。<h3 id="JDBC"><a href="#JDBC" class="headerlink" title="JDBC"></a>JDBC</h3></li>
+</ol>
+<p>选择关系型数据库，通常原因是企业已经具备管理关系型数据的专长，但它的性能上不优于上述消息存储实现。</p>
+<h3 id="内存存储"><a href="#内存存储" class="headerlink" title="内存存储"></a>内存存储</h3><p>内存消息存储器将所有持久化消息保存于内存中。在少量数量Message的情况下，内存消息存储会很有用。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2017/06/19/消息中间件之ActiveMQ（原理篇）/" data-id="cjn7ivqaw0005k4udc7kcf5bs" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
     <article id="post-activeMq基础应用" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/lfhboke.github.io/2017/06/17/activeMq基础应用/" class="article-date">
@@ -76,7 +320,7 @@
         
   
     <h1 itemprop="name">
-      <a class="article-title" href="/lfhboke.github.io/2017/06/17/activeMq基础应用/">消息中间件之activeMq（基础应用）</a>
+      <a class="article-title" href="/lfhboke.github.io/2017/06/17/activeMq基础应用/">消息中间件之ActiveMq（基础篇）</a>
     </h1>
   
 
@@ -103,14 +347,16 @@
 <p>摘录百度百科的概念解释：</p>
 <p>ActiveMQ是Apache软件基金下的一个开源软件，它遵循JMS1.1规范，是消息驱动中间件软件。它为企业消息传递提供高可用，出色性能，可扩展，稳定和安全保障。</p>
 <p><font color="red">既然遵循JMS规范，则可以说ActiveMQ是JMS的一种实现系统。</font>所以ActiveMQ也实现了两种消息传递模式，P2P以及Pub/Sub。</p>
-<h4 id="ActiveMQ简单案例"><a href="#ActiveMQ简单案例" class="headerlink" title="ActiveMQ简单案例"></a>ActiveMQ简单案例</h4><p>消费生产者：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//创建session</span></span><br><span class="line">ConnectionFactory connectionFactory = <span class="keyword">new</span> ActiveMQConnectionFactory(<span class="string">"tcp://127.0.0.1:61616"</span>);</span><br><span class="line">Connection connection = connectionFactory.createConnection();</span><br><span class="line">connection.start();</span><br><span class="line">Session session = connection.createSession(<span class="keyword">true</span>, Session.AUTO_ACKNOWLEDGE);</span><br><span class="line"><span class="comment">//创建一个消息队列--P/S模式</span></span><br><span class="line">Destination destination = session.createQueue(<span class="string">"test.topic"</span>);</span><br><span class="line"><span class="comment">//创建消息生产者</span></span><br><span class="line">MessageProducer producer = session.createProducer(destination);</span><br><span class="line"><span class="comment">//消息持久化</span></span><br><span class="line">producer.setDeliveryMode(DeliveryMode.PERSISTENT);</span><br><span class="line">producer.send(session.createTextMessage(<span class="string">"Message producer"</span>));</span><br><span class="line"><span class="comment">//提交会话</span></span><br><span class="line">session.commit();</span><br></pre></td></tr></table></figure></p>
-<p>消息消费者<br><code>`</code>java<br>//创建会话(与生产者一样)</p>
+<h4 id="ActiveMQ简单案例"><a href="#ActiveMQ简单案例" class="headerlink" title="ActiveMQ简单案例"></a>ActiveMQ简单案例</h4><p>消费生产者：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//创建session</span></span><br><span class="line">ConnectionFactory connectionFactory = <span class="keyword">new</span> ActiveMQConnectionFactory(<span class="string">"tcp://127.0.0.1:61616"</span>);</span><br><span class="line">Connection connection = connectionFactory.createConnection();</span><br><span class="line">connection.start();</span><br><span class="line">Session session = connection.createSession(<span class="keyword">true</span>, Session.AUTO_ACKNOWLEDGE);</span><br><span class="line"><span class="comment">//创建一个消息队列</span></span><br><span class="line">Destination destination = session.createQueue(<span class="string">"test.topic"</span>);</span><br><span class="line"><span class="comment">//创建消息生产者</span></span><br><span class="line">MessageProducer producer = session.createProducer(destination);</span><br><span class="line"><span class="comment">//消息持久化</span></span><br><span class="line">producer.setDeliveryMode(DeliveryMode.PERSISTENT);</span><br><span class="line">producer.send(session.createTextMessage(<span class="string">"Message producer"</span>));</span><br><span class="line"><span class="comment">//提交会话</span></span><br><span class="line">session.commit();</span><br></pre></td></tr></table></figure></p>
+<p>消息消费者</p>
+<p><code>`</code>java<br>//创建会话(与生产者一样)</p>
 <p>……</p>
-<p>//订阅topic<br>Destination destination = session.createQueue(“test.topic”);<br>//创建消费者<br>MessageConsumer consumer = session.createConsumer(destination);<br>while(true) {<br>    TextMessage message = (TextMessage) consumer.receive();<br>    if(message!=null) {<br>        System.out.println(“Message Consumer:” + message.getText());<br>    } else {<br>        break;<br>    }<br>}<br>session.commit();<br><code>`</code><script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.2.7/raphael.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/flowchart/1.6.5/flowchart.min.js"></script><textarea id="flowchart-0-code" style="display: none">op1=>operation: 应用
-op3=>operation: 中间件
-op4=>operation: 硬件操作系统
+<p>//获取消费者<br>Destination destination = session.createQueue(“test.topic”);<br>//创建消费者<br>MessageConsumer consumer = session.createConsumer(destination);<br>while(true) {<br>    TextMessage message = (TextMessage) consumer.receive();<br>    if(message!=null) {<br>        System.out.println(“Message Consumer:” + message.getText());<br>    } else {<br>        break;<br>    }<br>}<br>session.commit();</p>
+<p><code>`</code><script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.2.7/raphael.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/flowchart/1.6.5/flowchart.min.js"></script><textarea id="flowchart-0-code" style="display: none">op1=>operation: 应用
+op2=>operation: 中间件
+op3=>operation: 硬件操作系统
 
-op1(right)->op3(right)->op4(right)</textarea><textarea id="flowchart-0-options" style="display: none">{"scale":1,"line-width":2,"line-length":50,"text-margin":10,"font-size":12}</textarea><script>  var code = document.getElementById("flowchart-0-code").value;  var options = JSON.parse(decodeURIComponent(document.getElementById("flowchart-0-options").value));  var diagram = flowchart.parse(code);  diagram.drawSVG("flowchart-0", options);</script><textarea id="flowchart-1-code" style="display: none">op1=>operation: RPC系统
+op1(right)->op2(right)->op3(right)</textarea><textarea id="flowchart-0-options" style="display: none">{"scale":1,"line-width":2,"line-length":50,"text-margin":10,"font-size":12}</textarea><script>  var code = document.getElementById("flowchart-0-code").value;  var options = JSON.parse(decodeURIComponent(document.getElementById("flowchart-0-options").value));  var diagram = flowchart.parse(code);  diagram.drawSVG("flowchart-0", options);</script><textarea id="flowchart-1-code" style="display: none">op1=>operation: RPC系统
 op2=>operation: Msg1
 op4=>operation: Msg1
 op5=>operation: MOM系统
@@ -138,7 +384,118 @@ con3(no,down)->op6(right)->op4</textarea><textarea id="flowchart-3-options" styl
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2017/06/17/activeMq基础应用/" data-id="cjvv0sy0a0002r0ud96w8p9u4" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2017/06/17/activeMq基础应用/" data-id="cjn7ivqas0003k4udp73z98rs" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-java线程池解析" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2016/06/03/java线程池解析/" class="article-date">
+  <time datetime="2016-06-03T13:29:36.000Z" itemprop="datePublished">2016-06-03</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/lfhboke.github.io/2016/06/03/java线程池解析/">java线程池解析</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>以源码入手：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">ThreadPoolExecutor</span><span class="params">(<span class="keyword">int</span> corePoolSize, <span class="keyword">int</span> maximumPoolSize, <span class="keyword">long</span> keepAliveTime, TimeUnit unit,BlockingQueue&lt;Runnable&gt; workQueue)</span> </span>&#123;</span><br><span class="line">	<span class="comment">//threadFactory用于设置创建线程的工厂，可以通过线程工厂给每个创建出来的线程设置更有意义的名字</span></span><br><span class="line">    <span class="keyword">this</span>(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, Executors.defaultThreadFactory(), defaultHandler);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>解释一下参数的含义：</p>
+<ol>
+<li>corePoolSize 线程池基本大小，核心线程池大小，活动线程小于corePoolSize则直接创建，大于等于则先加到workQueue，队列满了才创建新的线程。当提交一个任务到线程池时，线程池会创建一个线程来执行任务，即使其他空闲的基本线程能够执行新任务等到需要执行的任务数大于线程池基本大小时不再创建。如果调用了线程池的prestartAllCoreThreads()方法，线程会提前创建并启动所有基本线程。</li>
+<li>maximumPoolSize 最大线程数，超过就reject：线程池允许创建的最大线程数。如果队列满了，并且已创建的线程数小于最大线程数，则线程池会再创建新的线程执行任务。</li>
+<li>keepAliveTime 线程池工作线程空闲后，保持存活的时间。所以，如果任务很多，并且每个任务执行的时间比较短，可以调大时间，提高线程的利用率。</li>
+<li>unit 线程活动保持时间的单位：可选的单位有天（DAYS）、小时（HOURS）、分钟（MINUTES）、毫秒（MILLISECONDS）、微妙（MICROSECONDS）和纳秒（NANOSECONDS）</li>
+<li>workQueue 工作队列，线程池中的工作线程都是从这个工作队列源源不断的获取任务进行执行。<br>另外加俩个参数：</li>
+<li>threadFactory 产生线程的工厂实例。</li>
+<li>handler 线程饱和后的处理策略。<h3 id="饱和策略"><a href="#饱和策略" class="headerlink" title="饱和策略"></a>饱和策略</h3>线程池超过最大线程之后，对于新的线程采取的操作：<font color="red">AbortPolicy</font>
+
+</li>
+</ol>
+<p>为Java线程池默认的阻塞策略，不执行此任务，而且直接抛出一个运行时异常，切记ThreadPoolExecutor.execute需要try catch，否则程序会直接退出。</p>
+<font color="red">DiscardPolicy</font>
+
+<p>直接抛弃，任务不执行，空方法</p>
+<font color="red">DiscardOldestPolicy</font>
+
+<p>从队列里面抛弃head的一个任务，并再次execute此task</p>
+<font color="red">CallerRunsPolicy</font>
+
+<p>在调用execute的线程里面执行此command，会阻塞入口(用于自定义拒绝策略)。<font color="red">实现RejectedExecutionHandler，并自己定义策略模式</font>。</p>
+<h3 id="工作机制"><a href="#工作机制" class="headerlink" title="工作机制"></a>工作机制</h3><ol>
+<li>如果当前运行线程少于corePoolSize，则创建新线程来执行任务。</li>
+<li>如果运行的线程等于或多于corePoolSize，则将任务加入BlockingQueue。</li>
+<li>如果无法将任务加入BlockingQueue，则在非corePool中创建新的线程来处理任务。</li>
+<li>如果创建新线程使当前运行的线程超出maximumPoolSize，任务将被拒绝，并调用RejectedExecutionHandler.rejectedExecution()方法。<h3 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h3>首先看看execute的源码：<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">execute</span><span class="params">(Runnable command)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">if</span>(command == <span class="keyword">null</span>) &#123;</span><br><span class="line">    	<span class="keyword">throw</span> <span class="keyword">new</span> NullPointException();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">int</span> c = ctl.get();</span><br><span class="line">    <span class="comment">//工作线程数小于核心线程数</span></span><br><span class="line">    <span class="keyword">if</span>(workerCountOf(c) &lt; corePoolSize) &#123;</span><br><span class="line">    	<span class="comment">//直接启动新线程，true表示会再次检查workerCount是否小于corePoolSize</span></span><br><span class="line">        <span class="keyword">if</span>(addWorker(command, <span class="keyword">true</span>)) &#123;</span><br><span class="line">        	<span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        c = ctl.get();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//如果工作线程数大于等于核心线程数，线程的状态未Running并且队列notfull</span></span><br><span class="line">    <span class="keyword">if</span>(isRunning(c) &amp;&amp; workQueue.offer(command)) &#123;</span><br><span class="line">    	<span class="comment">//再次检查线程的运行状态，如果不是Running直接从队列中移除</span></span><br><span class="line">        <span class="keyword">int</span> recheck = ctl.get();</span><br><span class="line">        <span class="keyword">if</span>(!isRunning(recheck) &amp;&amp; remove(command)) &#123;</span><br><span class="line">        	<span class="comment">//移除成功，拒绝该非运行的任务</span></span><br><span class="line">            reject(command);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (workerCountOf(recheck) == <span class="number">0</span>) &#123;</span><br><span class="line">        	<span class="comment">//防止了SHUTDOWN状态下没有活动线程了，但是队列里还有任务没执行这种特殊情况。</span></span><br><span class="line">            <span class="comment">//添加一个null任务时因为SHUTDOWN状态下，线程池不再接受新任务</span></span><br><span class="line">            addWorker(<span class="keyword">null</span>, <span class="keyword">false</span>);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span>(!addWorker(command, <span class="keyword">false</span>)) &#123;</span><br><span class="line">        	<span class="comment">//如果队列满了或者是非运行的任务都拒绝执行</span></span><br><span class="line">        	reject(command);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>然后是addWorker源码分析：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">addWorker</span><span class="params">(Runnable firstTask, <span class="keyword">boolean</span> core)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	...</span><br><span class="line">    </span><br><span class="line">	<span class="keyword">for</span>(;;) &#123;</span><br><span class="line">    	<span class="keyword">int</span> c = ctl.get();</span><br><span class="line">        <span class="comment">//获取当前线程状态</span></span><br><span class="line">        <span class="keyword">int</span> rs = runStateOf(c);</span><br><span class="line">        <span class="keyword">if</span>(rs &gt;= SHUTDOWN &amp;&amp; !(rs == SHUTDOWN &amp;&amp; firstTask == <span class="keyword">null</span> &amp;&amp; !workQueue.isEmpty()))</span><br><span class="line">        	<span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">            <span class="keyword">for</span>(;;) &#123;</span><br><span class="line">            	<span class="keyword">int</span> wc = workerCountOf(c);</span><br><span class="line">                <span class="comment">//如果超出容量或者最大线程池容量不在接受新任务</span></span><br><span class="line">                <span class="keyword">if</span>(wc &gt;= CAPACITY || wc &gt;= (core? corePoolSize: maximumPoolSize))</span><br><span class="line">                	<span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">                <span class="comment">//CAS锁增加工作线程数</span></span><br><span class="line">                <span class="keyword">if</span>(compareAndIncrementWorkerCount(c))</span><br><span class="line">                	<span class="keyword">break</span> retry;</span><br><span class="line">            	c = ctl.get();</span><br><span class="line">                <span class="keyword">if</span>(runStateOf(c) != rs) &#123;</span><br><span class="line">                	<span class="keyword">continue</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            </span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>核心代码就是如上所述，当然还有一些关闭之类和饱和策略处理的代码工作，有兴趣再去阅读</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/06/03/java线程池解析/" data-id="cjn7ivqav0004k4udxs5o36gw" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-java主线程监控子线程策略解析" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2016/06/03/java主线程监控子线程策略解析/" class="article-date">
+  <time datetime="2016-06-03T13:04:41.000Z" itemprop="datePublished">2016-06-03</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/lfhboke.github.io/2016/06/03/java主线程监控子线程策略解析/">Java UncaughtExceptionHandler（处理子线程异常）</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>主要针对于多线程编程时，出现工作线程异常中断时，可以优雅地记录下异常日志。</p>
+<p>Java的异常可以分为<font color="red">Checked Exceptions</font>和<font color="red">Unchecked Exceptions</font>。</p>
+<p>第二类异常，调用某些方法时，api也提示了可能会抛出某些异常，但该类异常不是一定要捕获的。</p>
+<p>不需要进行try catch也能执行，如果出错，只会在控制台打印，很难查找问题。</p>
+<p>所以Java提供了针对于第二类异常问题的处理方法：UncaughtExceptionHandler，对于未知异常的处理。</p>
+<p>简单使用一下UncaughtExceptionHandler：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">MyExceptionHandler</span> <span class="keyword">implements</span> <span class="title">UncaughtExceptionHandler</span> </span>&#123;</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">uncaughtException</span><span class="params">(Thread t, Throwable e)</span> </span>&#123;</span><br><span class="line">    	System.out.println(<span class="string">"Exception begin!"</span>);</span><br><span class="line">        </span><br><span class="line">        ...doSomething...</span><br><span class="line">        </span><br><span class="line">        e.printStackTrace();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>然后将此异常处理的实例赋值给所建线程<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Thread thread = <span class="keyword">new</span> Thread(<span class="keyword">new</span> T1());</span><br><span class="line">thread.setUncaughtExceptionHandler(<span class="keyword">new</span> MyExceptionHandler());</span><br><span class="line">thread.start();</span><br></pre></td></tr></table></figure></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/06/03/java主线程监控子线程策略解析/" data-id="cjn7ivqaq0002k4udn92mz4z1" class="article-share-link">Share</a>
       
       
     </footer>
@@ -240,7 +597,7 @@ op4(right)->op3(right)->op2(right)->op1(right)</textarea><textarea id="flowchart
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/02/Java类加载器原理详解/" data-id="cjvv0sxzz0000r0ud9r2f024z" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/02/Java类加载器原理详解/" data-id="cjn7ivqae0000k4udm0kg6d9h" class="article-share-link">Share</a>
       
       
     </footer>
@@ -294,7 +651,7 @@ op4(right)->op3(right)->op2(right)->op1(right)</textarea><textarea id="flowchart
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/01/Object类之hashcode-、equals-方法原理详解/" data-id="cjvv0sy070001r0ud43xoqlkx" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/01/Object类之hashcode-、equals-方法原理详解/" data-id="cjn7ivqan0001k4udwcn4f0fo" class="article-share-link">Share</a>
       
       
     </footer>
@@ -369,7 +726,7 @@ op4(right)->op3(right)->op2(right)->op1(right)</textarea><textarea id="flowchart
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/01/Object类之wait-、notify-方法原理详解/" data-id="cjvv0sy0o0003r0udk2ruzyj9" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/01/01/Object类之wait-、notify-方法原理详解/" data-id="cjn7ivqbd0009k4ud6ekobeqr" class="article-share-link">Share</a>
       
       
     </footer>
@@ -397,7 +754,7 @@ op4(right)->op3(right)->op2(right)->op1(right)</textarea><textarea id="flowchart
   <div class="widget-wrap">
     <h3 class="widget-title">Archives</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/01/">January 2016</a></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2018/10/">October 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/06/">June 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/01/">January 2016</a></li></ul>
     </div>
   </div>
 
@@ -410,19 +767,23 @@ op4(right)->op3(right)->op2(right)->op1(right)</textarea><textarea id="flowchart
       <ul>
         
           <li>
-            <a href="/lfhboke.github.io/2017/06/17/activeMq基础应用/">消息中间件之activeMq（基础应用）</a>
+            <a href="/lfhboke.github.io/2018/10/13/消息中间件之kafka-原理篇/">消息中间件之kafka(原理篇)</a>
           </li>
         
           <li>
-            <a href="/lfhboke.github.io/2016/01/02/Java类加载器原理详解/">Java类加载器原理详解</a>
+            <a href="/lfhboke.github.io/2018/10/13/消息中间件之kafka-基础篇/">消息中间件之kafka(基础篇)</a>
           </li>
         
           <li>
-            <a href="/lfhboke.github.io/2016/01/01/Object类之hashcode-、equals-方法原理详解/">Object类之hashcode()、equals()方法原理详解</a>
+            <a href="/lfhboke.github.io/2017/06/20/消息中间件之ActiveMQ-源码篇/">消息中间件之ActiveMQ(源码篇（客户端）)</a>
           </li>
         
           <li>
-            <a href="/lfhboke.github.io/2016/01/01/Object类之wait-、notify-方法原理详解/">Object类之wait()、notify()方法原理详解</a>
+            <a href="/lfhboke.github.io/2017/06/19/消息中间件之ActiveMQ（原理篇）/">消息中间件之ActiveMQ（原理篇）</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2017/06/17/activeMq基础应用/">消息中间件之ActiveMq（基础篇）</a>
           </li>
         
       </ul>
@@ -437,7 +798,7 @@ op4(right)->op3(right)->op2(right)->op1(right)</textarea><textarea id="flowchart
   
   <div class="outer">
     <div id="footer-info" class="inner">
-      &copy; 2019 lfhu<br>
+      &copy; 2018 lfhu<br>
       Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
     </div>
   </div>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="utf-8">
+  
+
+  
+  <title>消息中间件之ActiveMQ（原理篇） | lfh&#39;s bokes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="首先先分析一下ActiveMQ的消息存储机制： KahaDB目前ActiveMQ版本的默认存储方式。KahaDB存储是一个基于文件的快速存储消息，设计目标是使用容易并且尽可能快。123456&amp;lt;broker brokerName=&quot;broker&quot; ... &amp;gt;  &amp;lt;persistenceAdapter&amp;gt;    &amp;lt;kahaDB directory=&quot;activemq-dat">
+<meta property="og:type" content="article">
+<meta property="og:title" content="消息中间件之ActiveMQ（原理篇）">
+<meta property="og:url" content="https://linfordhu.github.io/lfhboke.github.io/2017/06/19/消息中间件之ActiveMQ（原理篇）/index.html">
+<meta property="og:site_name" content="lfh&#39;s bokes">
+<meta property="og:description" content="首先先分析一下ActiveMQ的消息存储机制： KahaDB目前ActiveMQ版本的默认存储方式。KahaDB存储是一个基于文件的快速存储消息，设计目标是使用容易并且尽可能快。123456&amp;lt;broker brokerName=&quot;broker&quot; ... &amp;gt;  &amp;lt;persistenceAdapter&amp;gt;    &amp;lt;kahaDB directory=&quot;activemq-dat">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2017-06-20T00:51:41.405Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="消息中间件之ActiveMQ（原理篇）">
+<meta name="twitter:description" content="首先先分析一下ActiveMQ的消息存储机制： KahaDB目前ActiveMQ版本的默认存储方式。KahaDB存储是一个基于文件的快速存储消息，设计目标是使用容易并且尽可能快。123456&amp;lt;broker brokerName=&quot;broker&quot; ... &amp;gt;  &amp;lt;persistenceAdapter&amp;gt;    &amp;lt;kahaDB directory=&quot;activemq-dat">
+  
+    <link rel="alternate" href="/lfhboke.github.io/atom.xml" title="lfh&#39;s bokes" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link rel="stylesheet" href="/lfhboke.github.io/css/style.css">
+</head>
+</html>
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/lfhboke.github.io/" id="logo">lfh&#39;s bokes</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/">Home</a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/lfhboke.github.io/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://linfordhu.github.io/lfhboke.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-消息中间件之ActiveMQ（原理篇）" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2017/06/19/消息中间件之ActiveMQ（原理篇）/" class="article-date">
+  <time datetime="2017-06-19T15:01:32.000Z" itemprop="datePublished">2017-06-19</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      消息中间件之ActiveMQ（原理篇）
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>首先先分析一下ActiveMQ的消息存储机制：</p>
+<h3 id="KahaDB"><a href="#KahaDB" class="headerlink" title="KahaDB"></a>KahaDB</h3><p>目前ActiveMQ版本的默认存储方式。KahaDB存储是一个基于文件的快速存储消息，设计目标是使用容易并且尽可能快。<br><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">broker</span> <span class="attr">brokerName</span>=<span class="string">"broker"</span> <span class="attr">...</span> &gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">persistenceAdapter</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">kahaDB</span> <span class="attr">directory</span>=<span class="string">"activemq-data"</span> <span class="attr">journalMaxFileLength</span>=<span class="string">"32mb"</span>/&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">persistenceAdapter</span>&gt;</span></span><br><span class="line">  ...</span><br><span class="line"><span class="tag">&lt;/<span class="name">broker</span>&gt;</span></span><br></pre></td></tr></table></figure></p>
+<p>先看一下实际ActiveMQ的KahaDB存储方式下的数据目录如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">$ ll -s -t -h</span><br><span class="line">total 11M</span><br><span class="line">232K -rw-rw-r-- 1 cdhfive cdhfive 228K Jun 18 09:27 db.data</span><br><span class="line">52K -rw-rw-r-- 1 cdhfive cdhfive 49K Jun 18 09:27 db.redo</span><br><span class="line">9.9M -rw-rw-r-- 1 cdhfive cdhfive 32M Jun 18 09:27 db-5.log</span><br><span class="line">4.0K -rw-rw-r-- 1 cdhfive cdhfive 8 Jun 14 10:37 lock</span><br></pre></td></tr></table></figure>
+<p>解释一下四个文件：</p>
+<ol>
+<li>db.data</li>
+</ol>
+<p>它是消息的索引文件。本质上是B-Tree的实现，使用B-Tree作为索引指向db-*.log里面存储的消息。</p>
+<ol start="2">
+<li>db.redo</li>
+</ol>
+<p>主要用来进行消息恢复。</p>
+<ol start="3">
+<li>db-*.log</li>
+</ol>
+<p>存储消息的内容。对于一个消息而言，不仅仅有消息本身的数据（message data），而且还有（Destinations、订阅关系、事务…）<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">the data logs contain all of the message data and all of the information about destinations,subscriptions,transactions,etc..</span><br></pre></td></tr></table></figure></p>
+<p>data.log以日志形式存储消息，而且<font color="red">新的数据总是以APPEND的方式追加到日志文件末尾。</font>因此，消息的存储是很快的。比如，对于持久化消息，Producer把消息发送给Broker，Broker先把消息存储到磁盘中，然后再向Producer返回Acknowledge。Append方式在一定程度上减少了Broker向Producer返回Acknowledge的时间。</p>
+<ol start="4">
+<li>lock文件</li>
+</ol>
+<p>另外，一些关于KahaDB的配置选项如下：</p>
+<ol>
+<li><p>indexWriteBatchSize 默认值1000，当Metadata Cache中更新的索引到达了1000时，才同步到磁盘上的Metadata Store中。<font color="red">不是每次更新都写磁盘，而是批量更新写磁盘，比较写磁盘的代价是很大的。</font></p>
+</li>
+<li><p>indexCacheSize 默认值10000，(number of index pages cached in memory)，在内存中最多分配个页面来缓存index。缓存的index越多，命中的概率就越大，检索的效率就越高。</p>
+</li>
+<li><p>journalMaxFileLength 默认值32MB，当存储的消息达到32MB时，新建一个新文件来保存消息。这个配置对生产者或消息者的速率有影响。比如，生产者速率很快而消费者速率很慢时，将它配置得大一点比较好。</p>
+</li>
+<li><p>enableJournalDiskSyncs 默认值true，默认采用同步写磁盘，即消息先存储到磁盘中再向Producer返回ACK。</p>
+</li>
+<li><p>cleanupinterval 默认值30000ms，当消息被消息者成功消费之后，Broker就可以将消息删除了。</p>
+</li>
+<li><p>checkpointInterval 默认值5s，每隔5s将内存中index(Metadata Cache)更新到磁盘的Index文件中（Metadata Store）。</p>
+</li>
+</ol>
+<h4 id="kahaDB存储底层实现"><a href="#kahaDB存储底层实现" class="headerlink" title="kahaDB存储底层实现"></a>kahaDB存储底层实现</h4><p>各个部分与KahaDB配置的存储目录下的文件是一一对应的。</p>
+<ol>
+<li>在内存（cache）中的那部分B-Tree是Metadata Cache</li>
+</ol>
+<p>通过将索引缓存到内存中，可以加快查询的速度。但是需要定时将Metadata Cache与Metadata Store同步。</p>
+<p><font color="red">同步过程称为：check point。</font>由上面介绍参数checkpointInterval选项决定每隔多久时间进行一次checkpoint操作。</p>
+<ol start="2">
+<li>BTree Indexs则是保存在磁盘上的，称为Metadata Store，它对应于文件db.data，它就是对Data Logs以B树的形式索引。有了它，Broker（消息服务器）可以快速地重启恢复，因为它是消息的索引，根据它就能恢复每条消息的location。</li>
+</ol>
+<p>如果Metadata Store被损坏，则只能扫描整个Data Logs来重建B树了，这个过程十分缓慢。</p>
+<ol start="3">
+<li>Data Logs则对应于文件db-*.log,默认是32MB</li>
+</ol>
+<p>Data Logs以日志形式存储消息，它是生产者生产的数据的真正载体。</p>
+<ol start="4">
+<li>Redo Log则对应于文件db.redo</li>
+</ol>
+<p>redo log的原理用到了“Double write”。</p>
+<p>下面贴一点代码，关于“Double write”：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> unload <span class="keyword">throws</span> IOException &#123;</span><br><span class="line">	<span class="comment">//load时创建writeFile（db.data）和recoveryFile(db.redo)</span></span><br><span class="line">    writeFile = <span class="keyword">new</span> RecoverableRandomAccessFile(file, <span class="string">"rw"</span>, <span class="keyword">false</span>);</span><br><span class="line">    </span><br><span class="line">    ...</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">if</span>(enableRecoveryFile) &#123;</span><br><span class="line">    	recoveryFile = <span class="keyword">new</span> RecoverableRandomAccessFile(getRecoveryFile(), <span class="string">"rw"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">writeBatch</span><span class="params">()</span> <span class="keyword">throws</span> IOException</span>&#123;</span><br><span class="line">	</span><br><span class="line">    ...</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//数据写入磁盘时，先写到Recovery Buffer中</span></span><br><span class="line">    <span class="keyword">for</span>(PageWrite w: batch) &#123;</span><br><span class="line">    	<span class="keyword">try</span>&#123;</span><br><span class="line">        	checksum.update(w.getDiskBound(), <span class="number">0</span>, pageSize);</span><br><span class="line">        &#125; <span class="keyword">catch</span>(Throwable t) &#123;</span><br><span class="line">        	<span class="keyword">throw</span> IOExceptionSupport.create();</span><br><span class="line">        &#125;</span><br><span class="line">        recoveryFile.writeLong(w.page.getPageId());</span><br><span class="line">        recoveryFile.write(w.getDiskBound(), <span class="number">0</span>, pageSize);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    ...</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//写入真正的目的文件中</span></span><br><span class="line">    <span class="keyword">for</span>(PageWrite w: batch) &#123;</span><br><span class="line">    	writeFile.seek(toOffset(w.page.getPageId()));</span><br><span class="line">        writeFile.write(w.getDiskBound(),<span class="number">0</span>,pageSize);</span><br><span class="line">        w.done();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h3 id="AMQ"><a href="#AMQ" class="headerlink" title="AMQ"></a>AMQ</h3><p>AMQ消息存储是可靠持久性和高性能索引的事务日志组合，当消息吞吐量是应用程序的主要需求时，该存储是最佳选择。但因为它为每个索引使用两个分开的文件，并且每隔Destination都有一个索引。</p>
+<p>与KahaDB类似，主要包括以下几部分：</p>
+<ol>
+<li>Data Logs：作为消息Journal。</li>
+<li>Cache：在消息写入data log后，在内存中保持消息用于快速恢复。</li>
+<li>Reference Store：在journal保存消息的引用，按照消息ID索引。<h3 id="JDBC"><a href="#JDBC" class="headerlink" title="JDBC"></a>JDBC</h3></li>
+</ol>
+<p>选择关系型数据库，通常原因是企业已经具备管理关系型数据的专长，但它的性能上不优于上述消息存储实现。</p>
+<h3 id="内存存储"><a href="#内存存储" class="headerlink" title="内存存储"></a>内存存储</h3><p>内存消息存储器将所有持久化消息保存于内存中。在少量数量Message的情况下，内存消息存储会很有用。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2017/06/19/消息中间件之ActiveMQ（原理篇）/" data-id="cjn7ivqaw0005k4udc7kcf5bs" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/lfhboke.github.io/2017/06/20/消息中间件之ActiveMQ-源码篇/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          消息中间件之ActiveMQ(源码篇（客户端）)
+        
+      </div>
+    </a>
+  
+  
+    <a href="/lfhboke.github.io/2017/06/17/activeMq基础应用/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">消息中间件之ActiveMq（基础篇）</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2018/10/">October 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/06/">June 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/01/">January 2016</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/lfhboke.github.io/2018/10/13/消息中间件之kafka-原理篇/">消息中间件之kafka(原理篇)</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2018/10/13/消息中间件之kafka-基础篇/">消息中间件之kafka(基础篇)</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2017/06/20/消息中间件之ActiveMQ-源码篇/">消息中间件之ActiveMQ(源码篇（客户端）)</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2017/06/19/消息中间件之ActiveMQ（原理篇）/">消息中间件之ActiveMQ（原理篇）</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2017/06/17/activeMq基础应用/">消息中间件之ActiveMq（基础篇）</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2018 lfhu<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/lfhboke.github.io/" class="mobile-nav-link">Home</a>
+  
+    <a href="/lfhboke.github.io/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/lfhboke.github.io/fancybox/jquery.fancybox.css">
+  <script src="/lfhboke.github.io/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/lfhboke.github.io/js/script.js"></script>
+
+
+
+  </div>
+</body>
+</html>

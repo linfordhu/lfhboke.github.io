@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="utf-8">
+  
+
+  
+  <title>java线程池解析 | lfh&#39;s bokes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="以源码入手：1234public ThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit,BlockingQueue&amp;lt;Runnable&amp;gt; workQueue) &amp;#123;	//threadFactory用于设置创建线程的工厂，可以通过线程工厂给每个创建出来的">
+<meta property="og:type" content="article">
+<meta property="og:title" content="java线程池解析">
+<meta property="og:url" content="https://linfordhu.github.io/lfhboke.github.io/2016/06/03/java线程池解析/index.html">
+<meta property="og:site_name" content="lfh&#39;s bokes">
+<meta property="og:description" content="以源码入手：1234public ThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit,BlockingQueue&amp;lt;Runnable&amp;gt; workQueue) &amp;#123;	//threadFactory用于设置创建线程的工厂，可以通过线程工厂给每个创建出来的">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2016-06-03T16:16:38.441Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="java线程池解析">
+<meta name="twitter:description" content="以源码入手：1234public ThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit,BlockingQueue&amp;lt;Runnable&amp;gt; workQueue) &amp;#123;	//threadFactory用于设置创建线程的工厂，可以通过线程工厂给每个创建出来的">
+  
+    <link rel="alternate" href="/lfhboke.github.io/atom.xml" title="lfh&#39;s bokes" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link rel="stylesheet" href="/lfhboke.github.io/css/style.css">
+</head>
+</html>
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/lfhboke.github.io/" id="logo">lfh&#39;s bokes</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/">Home</a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/lfhboke.github.io/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://linfordhu.github.io/lfhboke.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-java线程池解析" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2016/06/03/java线程池解析/" class="article-date">
+  <time datetime="2016-06-03T13:29:36.000Z" itemprop="datePublished">2016-06-03</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      java线程池解析
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>以源码入手：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">ThreadPoolExecutor</span><span class="params">(<span class="keyword">int</span> corePoolSize, <span class="keyword">int</span> maximumPoolSize, <span class="keyword">long</span> keepAliveTime, TimeUnit unit,BlockingQueue&lt;Runnable&gt; workQueue)</span> </span>&#123;</span><br><span class="line">	<span class="comment">//threadFactory用于设置创建线程的工厂，可以通过线程工厂给每个创建出来的线程设置更有意义的名字</span></span><br><span class="line">    <span class="keyword">this</span>(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, Executors.defaultThreadFactory(), defaultHandler);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>解释一下参数的含义：</p>
+<ol>
+<li>corePoolSize 线程池基本大小，核心线程池大小，活动线程小于corePoolSize则直接创建，大于等于则先加到workQueue，队列满了才创建新的线程。当提交一个任务到线程池时，线程池会创建一个线程来执行任务，即使其他空闲的基本线程能够执行新任务等到需要执行的任务数大于线程池基本大小时不再创建。如果调用了线程池的prestartAllCoreThreads()方法，线程会提前创建并启动所有基本线程。</li>
+<li>maximumPoolSize 最大线程数，超过就reject：线程池允许创建的最大线程数。如果队列满了，并且已创建的线程数小于最大线程数，则线程池会再创建新的线程执行任务。</li>
+<li>keepAliveTime 线程池工作线程空闲后，保持存活的时间。所以，如果任务很多，并且每个任务执行的时间比较短，可以调大时间，提高线程的利用率。</li>
+<li>unit 线程活动保持时间的单位：可选的单位有天（DAYS）、小时（HOURS）、分钟（MINUTES）、毫秒（MILLISECONDS）、微妙（MICROSECONDS）和纳秒（NANOSECONDS）</li>
+<li>workQueue 工作队列，线程池中的工作线程都是从这个工作队列源源不断的获取任务进行执行。<br>另外加俩个参数：</li>
+<li>threadFactory 产生线程的工厂实例。</li>
+<li>handler 线程饱和后的处理策略。<h3 id="饱和策略"><a href="#饱和策略" class="headerlink" title="饱和策略"></a>饱和策略</h3>线程池超过最大线程之后，对于新的线程采取的操作：<font color="red">AbortPolicy</font>
+
+</li>
+</ol>
+<p>为Java线程池默认的阻塞策略，不执行此任务，而且直接抛出一个运行时异常，切记ThreadPoolExecutor.execute需要try catch，否则程序会直接退出。</p>
+<font color="red">DiscardPolicy</font>
+
+<p>直接抛弃，任务不执行，空方法</p>
+<font color="red">DiscardOldestPolicy</font>
+
+<p>从队列里面抛弃head的一个任务，并再次execute此task</p>
+<font color="red">CallerRunsPolicy</font>
+
+<p>在调用execute的线程里面执行此command，会阻塞入口(用于自定义拒绝策略)。<font color="red">实现RejectedExecutionHandler，并自己定义策略模式</font>。</p>
+<h3 id="工作机制"><a href="#工作机制" class="headerlink" title="工作机制"></a>工作机制</h3><ol>
+<li>如果当前运行线程少于corePoolSize，则创建新线程来执行任务。</li>
+<li>如果运行的线程等于或多于corePoolSize，则将任务加入BlockingQueue。</li>
+<li>如果无法将任务加入BlockingQueue，则在非corePool中创建新的线程来处理任务。</li>
+<li>如果创建新线程使当前运行的线程超出maximumPoolSize，任务将被拒绝，并调用RejectedExecutionHandler.rejectedExecution()方法。<h3 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h3>首先看看execute的源码：<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">execute</span><span class="params">(Runnable command)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">if</span>(command == <span class="keyword">null</span>) &#123;</span><br><span class="line">    	<span class="keyword">throw</span> <span class="keyword">new</span> NullPointException();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">int</span> c = ctl.get();</span><br><span class="line">    <span class="comment">//工作线程数小于核心线程数</span></span><br><span class="line">    <span class="keyword">if</span>(workerCountOf(c) &lt; corePoolSize) &#123;</span><br><span class="line">    	<span class="comment">//直接启动新线程，true表示会再次检查workerCount是否小于corePoolSize</span></span><br><span class="line">        <span class="keyword">if</span>(addWorker(command, <span class="keyword">true</span>)) &#123;</span><br><span class="line">        	<span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        c = ctl.get();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//如果工作线程数大于等于核心线程数，线程的状态未Running并且队列notfull</span></span><br><span class="line">    <span class="keyword">if</span>(isRunning(c) &amp;&amp; workQueue.offer(command)) &#123;</span><br><span class="line">    	<span class="comment">//再次检查线程的运行状态，如果不是Running直接从队列中移除</span></span><br><span class="line">        <span class="keyword">int</span> recheck = ctl.get();</span><br><span class="line">        <span class="keyword">if</span>(!isRunning(recheck) &amp;&amp; remove(command)) &#123;</span><br><span class="line">        	<span class="comment">//移除成功，拒绝该非运行的任务</span></span><br><span class="line">            reject(command);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (workerCountOf(recheck) == <span class="number">0</span>) &#123;</span><br><span class="line">        	<span class="comment">//防止了SHUTDOWN状态下没有活动线程了，但是队列里还有任务没执行这种特殊情况。</span></span><br><span class="line">            <span class="comment">//添加一个null任务时因为SHUTDOWN状态下，线程池不再接受新任务</span></span><br><span class="line">            addWorker(<span class="keyword">null</span>, <span class="keyword">false</span>);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span>(!addWorker(command, <span class="keyword">false</span>)) &#123;</span><br><span class="line">        	<span class="comment">//如果队列满了或者是非运行的任务都拒绝执行</span></span><br><span class="line">        	reject(command);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>然后是addWorker源码分析：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">addWorker</span><span class="params">(Runnable firstTask, <span class="keyword">boolean</span> core)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	...</span><br><span class="line">    </span><br><span class="line">	<span class="keyword">for</span>(;;) &#123;</span><br><span class="line">    	<span class="keyword">int</span> c = ctl.get();</span><br><span class="line">        <span class="comment">//获取当前线程状态</span></span><br><span class="line">        <span class="keyword">int</span> rs = runStateOf(c);</span><br><span class="line">        <span class="keyword">if</span>(rs &gt;= SHUTDOWN &amp;&amp; !(rs == SHUTDOWN &amp;&amp; firstTask == <span class="keyword">null</span> &amp;&amp; !workQueue.isEmpty()))</span><br><span class="line">        	<span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">            <span class="keyword">for</span>(;;) &#123;</span><br><span class="line">            	<span class="keyword">int</span> wc = workerCountOf(c);</span><br><span class="line">                <span class="comment">//如果超出容量或者最大线程池容量不在接受新任务</span></span><br><span class="line">                <span class="keyword">if</span>(wc &gt;= CAPACITY || wc &gt;= (core? corePoolSize: maximumPoolSize))</span><br><span class="line">                	<span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">                <span class="comment">//CAS锁增加工作线程数</span></span><br><span class="line">                <span class="keyword">if</span>(compareAndIncrementWorkerCount(c))</span><br><span class="line">                	<span class="keyword">break</span> retry;</span><br><span class="line">            	c = ctl.get();</span><br><span class="line">                <span class="keyword">if</span>(runStateOf(c) != rs) &#123;</span><br><span class="line">                	<span class="keyword">continue</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            </span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>核心代码就是如上所述，当然还有一些关闭之类和饱和策略处理的代码工作，有兴趣再去阅读</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2016/06/03/java线程池解析/" data-id="cjn7ivqav0004k4udxs5o36gw" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/lfhboke.github.io/2017/06/17/activeMq基础应用/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          消息中间件之ActiveMq（基础篇）
+        
+      </div>
+    </a>
+  
+  
+    <a href="/lfhboke.github.io/2016/06/03/java主线程监控子线程策略解析/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">Java UncaughtExceptionHandler（处理子线程异常）</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2018/10/">October 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/06/">June 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/01/">January 2016</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/lfhboke.github.io/2018/10/13/消息中间件之kafka-原理篇/">消息中间件之kafka(原理篇)</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2018/10/13/消息中间件之kafka-基础篇/">消息中间件之kafka(基础篇)</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2017/06/20/消息中间件之ActiveMQ-源码篇/">消息中间件之ActiveMQ(源码篇（客户端）)</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2017/06/19/消息中间件之ActiveMQ（原理篇）/">消息中间件之ActiveMQ（原理篇）</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2017/06/17/activeMq基础应用/">消息中间件之ActiveMq（基础篇）</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2018 lfhu<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/lfhboke.github.io/" class="mobile-nav-link">Home</a>
+  
+    <a href="/lfhboke.github.io/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/lfhboke.github.io/fancybox/jquery.fancybox.css">
+  <script src="/lfhboke.github.io/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/lfhboke.github.io/js/script.js"></script>
+
+
+
+  </div>
+</body>
+</html>
