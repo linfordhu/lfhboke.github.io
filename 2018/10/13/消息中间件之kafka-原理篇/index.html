@@ -15,8 +15,10 @@
 <meta property="og:description" content="kafka架构图中概念定义如下：  producer：消息生产者。 broker：集群包含的服务器。 topic：每条发布到集群的消息类别，概念篇里没说明这边补一下，kafka是面向topic的。 partition：每个topic包含一个或多个partition。kafka的分配单元。 consumer：从kafka集群中消费消息的终端或服务。 Consumer group：high-level">
 <meta property="og:locale" content="default">
 <meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/kafka1.png">
-<meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/zookeeper1.png">
-<meta property="og:updated_time" content="2018-10-13T19:09:24.629Z">
+<meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/zookeeper1.jpg">
+<meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/kafka2.jpg">
+<meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/kafka3.jpg">
+<meta property="og:updated_time" content="2018-10-13T22:02:51.574Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="消息中间件之kafka(原理篇)">
 <meta name="twitter:description" content="kafka架构图中概念定义如下：  producer：消息生产者。 broker：集群包含的服务器。 topic：每条发布到集群的消息类别，概念篇里没说明这边补一下，kafka是面向topic的。 partition：每个topic包含一个或多个partition。kafka的分配单元。 consumer：从kafka集群中消费消息的终端或服务。 Consumer group：high-level">
@@ -103,12 +105,47 @@
 <li>controller：kafka集群中的其中一个服务器，用来进行leader election以及各种failover。</li>
 <li>zookeeper：kafka通过zookeeper来存储集群的meta信息。<h4 id="zookeeper节点中kafka存储结构"><a href="#zookeeper节点中kafka存储结构" class="headerlink" title="zookeeper节点中kafka存储结构"></a>zookeeper节点中kafka存储结构</h4></li>
 </ol>
-<p><img src="/lfhboke.github.io/css/images/zookeeper1.png" alt="kafka在zookeeper中存储结构"></p>
+<p><img src="/lfhboke.github.io/css/images/zookeeper1.jpg" alt="kafka在zookeeper中存储结构"></p>
+<h3 id="producer发布消息"><a href="#producer发布消息" class="headerlink" title="producer发布消息"></a>producer发布消息</h3><h4 id="写入方式"><a href="#写入方式" class="headerlink" title="写入方式"></a>写入方式</h4><p>producer采用push模式将消息发布到broker，每条消息都被append到patition中，属于顺序写磁盘（顺序写磁盘效率比随机写内存要高，保障kafka吞吐率）。</p>
+<h4 id="消息路由"><a href="#消息路由" class="headerlink" title="消息路由"></a>消息路由</h4><p>producer发送消息到broker时，会根据分区算法选择将其存储到哪一个partition。其路由机制为：<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">指定了partition，则直接使用；</span><br><span class="line">未指定partition但指定key，通过对key的value进行<span class="built_in">hash</span>选出一个partition；</span><br><span class="line">partition和key都未指定，使用轮询选出一个partition。</span><br></pre></td></tr></table></figure></p>
+<p>然后看一段java客户端分区源码：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//创建消息实例</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">ProducerRecord</span><span class="params">(String topic, Integer partition, Long timestamp, K key, V value)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">if</span>(topic == <span class="keyword">null</span>)&#123;</span><br><span class="line">    	<span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"Topic cannot be null"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span>(timestamp != <span class="keyword">null</span> &amp;&amp; timestamp &lt; <span class="number">0</span>)&#123;</span><br><span class="line">    	<span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"Invalid timestamp"</span> + timestamp);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">this</span>.topic = topic;</span><br><span class="line">    <span class="keyword">this</span>.partition = partition;</span><br><span class="line">    <span class="keyword">this</span>.key = key;</span><br><span class="line">    <span class="keyword">this</span>.value = value;</span><br><span class="line">    <span class="keyword">this</span>.timestamp = timestamp;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//计算partition，如果指定了partition则直接使用，否则使用key计算</span></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">int</span> <span class="title">partition</span><span class="params">(ProducerRecord&lt;K, V&gt; record, <span class="keyword">byte</span>[] serializedKey, <span class="keyword">byte</span>[] serializedValue, Cluster cluster)</span> </span>&#123;</span><br><span class="line">	Integer partition = record.partition();</span><br><span class="line">    <span class="keyword">if</span>(<span class="keyword">null</span> != partition) &#123;</span><br><span class="line">    	List&lt;Partitioninfo&gt; partitions = cluster.partitionsforTopic(record.topic());</span><br><span class="line">        <span class="keyword">int</span> lastPartition = partitions.size() - <span class="number">1</span>;</span><br><span class="line">        <span class="keyword">if</span>(partition &lt; <span class="number">0</span> || partition &gt; lastPartition) &#123;</span><br><span class="line">        	<span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> partition;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>.partitioner.partition(record.topic(), record.key(), serializedKey, record.value(), serializedValue, cluster);</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//使用key选取partition</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">partition</span><span class="params">(String topic, Object key, <span class="keyword">byte</span>[] keyBytes, Object value, <span class="keyword">byte</span>[] valueBytes, Cluster cluster)</span> </span>&#123;</span><br><span class="line">	List&lt;PartitionInfo&gt; partitions = cluster.partitionsForTopic(topic);</span><br><span class="line">    <span class="keyword">int</span> numPartitions = partitions.size();</span><br><span class="line">    <span class="keyword">if</span>(keyBytes == <span class="keyword">null</span>)&#123;</span><br><span class="line">    	<span class="keyword">int</span> nextValue = counter.getAndIncrement();</span><br><span class="line">        List&lt;PartitionInfo&gt; availablePartitions = cluster.availablePartitionsForTopic(topic);</span><br><span class="line">        <span class="keyword">if</span>(availablePartitions.size() &gt; <span class="number">0</span>) &#123;</span><br><span class="line">        	<span class="keyword">int</span> part = DefaultPartitioner.toPositive(nextValue) % availablePartitions.size();</span><br><span class="line">            <span class="keyword">return</span> availablePartitions.get(part).partition();</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        	<span class="keyword">return</span> DefaultPartitioner.toPositive(nextValue) % numPartitions;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    	<span class="comment">//对keyBytes进行hash选出partition</span></span><br><span class="line">        <span class="keyword">return</span> DefaultPartitioner.toPositive(Utils.murmur2(keyBytes)) % numPartittions;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h4 id="写入流程"><a href="#写入流程" class="headerlink" title="写入流程"></a>写入流程</h4><p>producer写入消息序列图如下：<br><img src="/lfhboke.github.io/css/images/kafka2.jpg" alt="kafka producer写入消息序列图"></p>
+<ol>
+<li>producer先从zookeeper的”/brokers/…/state”节点找到该partition的leader</li>
+<li>producer将消息发送给该leader</li>
+<li>leader将消息写入本地log</li>
+<li>followers从leader pull消息，写入本地log后leader发送ACK</li>
+<li>leader收到所有ISR中的replica的ACK后，增加HW（high watermark，最后commit的offset）并向producer发送ACK<h4 id="producer-delivery-guarantee"><a href="#producer-delivery-guarantee" class="headerlink" title="producer delivery guarantee"></a>producer delivery guarantee</h4></li>
+</ol>
+<p>一般情况下存在三种情况：</p>
+<ol>
+<li>At most once消息可能会丢，但绝不会重复传输</li>
+<li>At least one消息绝不会，但可能会重复传输</li>
+<li>Exactly once每条消息肯定会被传输一次且仅传输一次<h3 id="broker保存消息"><a href="#broker保存消息" class="headerlink" title="broker保存消息"></a>broker保存消息</h3><h4 id="存储方式"><a href="#存储方式" class="headerlink" title="存储方式"></a>存储方式</h4></li>
+</ol>
+<p>物理上把topic分成一个或多个partition（对应server.properties中的num.partitions=3配置），每个partition物理上对应一个文件夹（该文件夹存储该partition的所有消息和索引文件）。</p>
+<h4 id="存储策略"><a href="#存储策略" class="headerlink" title="存储策略"></a>存储策略</h4><p>无论消息是否被消费，kafka都会保留所有消息。有两种策略可以删除旧数据：</p>
+<ol>
+<li>基于时间：log.retention.hours = 168</li>
+<li>基于大小：log.retention.bytes = 1073741824</li>
+</ol>
+<p>需要注意的是，因为Kafka读取特定消息的时间复杂度为O(1)，即与文件大小无关，所以这里删除过期文件与提高kafka性能无关。</p>
+<h4 id="topic创建与删除"><a href="#topic创建与删除" class="headerlink" title="topic创建与删除"></a>topic创建与删除</h4><h5 id="创建topic"><a href="#创建topic" class="headerlink" title="创建topic"></a>创建topic</h5><p>创建topic的序列图如下所示：<br><img src="/lfhboke.github.io/css/images/kafka3.jpg" alt="kafka producer写入消息序列图"></p>
+<ol>
+<li>controller在Zookeeper的/brokers/topics节点上注册watcher，当topic被创建，则controller会通过watch得到该topic的partition/replica分配。</li>
+<li><p>controller从/brokers/ids读取当前所有可用的broker列表，对于set_p中的每个partition：</p>
+<p> 从分配给该partition的所有replica中任选一个可用的broker作为新的leader，并将AR设置为新的ISR</p>
+<p> 将新的leader和ISR写入/brokers/topics/[topic]/partitions/[partition]/state</p>
+</li>
+<li>controller通过RPC向相关的broker发送LeaderAndISRRequest。<h5 id="删除topic"><a href="#删除topic" class="headerlink" title="删除topic"></a>删除topic</h5></li>
+<li>controller在zookeeper的/brokers/topic节点上注册watcher，当topic被删除，则controller会通过watch得到该topic的partition/replica分配。</li>
+<li>若delete.topic.enable=false，结束；否则controller注册在/admin/delete_topics上的watch被fire，controller通过回调向对应的broker发送StopreplicaRequest。</li>
+</ol>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2018/10/13/消息中间件之kafka-原理篇/" data-id="cjn7tlnc000077wudutxn1jm1" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2018/10/13/消息中间件之kafka-原理篇/" data-id="cjn80hc5p00074cud65vs39j0" class="article-share-link">Share</a>
       
       
     </footer>
