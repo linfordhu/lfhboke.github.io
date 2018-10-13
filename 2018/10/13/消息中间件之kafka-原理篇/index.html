@@ -7,18 +7,19 @@
   
   <title>消息中间件之kafka(原理篇) | lfh&#39;s bokes</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="kafka架构">
+  <meta name="description" content="kafka架构图中概念定义如下：  producer：消息生产者。 broker：集群包含的服务器。 topic：每条发布到集群的消息类别，概念篇里没说明这边补一下，kafka是面向topic的。 partition：每个topic包含一个或多个partition。kafka的分配单元。 consumer：从kafka集群中消费消息的终端或服务。 Consumer group：high-level">
 <meta property="og:type" content="article">
 <meta property="og:title" content="消息中间件之kafka(原理篇)">
 <meta property="og:url" content="https://linfordhu.github.io/lfhboke.github.io/2018/10/13/消息中间件之kafka-原理篇/index.html">
 <meta property="og:site_name" content="lfh&#39;s bokes">
-<meta property="og:description" content="kafka架构">
+<meta property="og:description" content="kafka架构图中概念定义如下：  producer：消息生产者。 broker：集群包含的服务器。 topic：每条发布到集群的消息类别，概念篇里没说明这边补一下，kafka是面向topic的。 partition：每个topic包含一个或多个partition。kafka的分配单元。 consumer：从kafka集群中消费消息的终端或服务。 Consumer group：high-level">
 <meta property="og:locale" content="default">
 <meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/kafka1.png">
-<meta property="og:updated_time" content="2018-10-13T14:38:24.854Z">
+<meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/zookeeper1.png">
+<meta property="og:updated_time" content="2018-10-13T19:09:24.629Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="消息中间件之kafka(原理篇)">
-<meta name="twitter:description" content="kafka架构">
+<meta name="twitter:description" content="kafka架构图中概念定义如下：  producer：消息生产者。 broker：集群包含的服务器。 topic：每条发布到集群的消息类别，概念篇里没说明这边补一下，kafka是面向topic的。 partition：每个topic包含一个或多个partition。kafka的分配单元。 consumer：从kafka集群中消费消息的终端或服务。 Consumer group：high-level">
 <meta name="twitter:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/kafka1.png">
   
     <link rel="alternate" href="/lfhboke.github.io/atom.xml" title="lfh&#39;s bokes" type="application/atom+xml">
@@ -88,12 +89,26 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h3 id="kafka架构"><a href="#kafka架构" class="headerlink" title="kafka架构"></a>kafka架构</h3><p><img src="/lfhboke.github.io/css/images/kafka1.png" alt="kafka拓扑结构"></p>
+        <h3 id="kafka架构"><a href="#kafka架构" class="headerlink" title="kafka架构"></a>kafka架构</h3><p><img src="/lfhboke.github.io/css/images/kafka1.png" alt="kafka拓扑结构"><br>图中概念定义如下：</p>
+<ol>
+<li>producer：消息生产者。</li>
+<li>broker：集群包含的服务器。</li>
+<li>topic：每条发布到集群的消息类别，概念篇里没说明这边补一下，kafka是面向topic的。</li>
+<li>partition：每个topic包含一个或多个partition。kafka的分配单元。</li>
+<li>consumer：从kafka集群中消费消息的终端或服务。</li>
+<li>Consumer group：high-level consumer API中，每个consumer都属于一个consumer group，每条消息只能被consumer group中的一个Consumer消费，但可以被多个consumer group消费。</li>
+<li>replica：partition的副本，保障partition的高可用。</li>
+<li>leader： replica中的一个角色，producer和consumer只跟leader交互。</li>
+<li>follower：replica中的一个角色，从leader中复制数据。</li>
+<li>controller：kafka集群中的其中一个服务器，用来进行leader election以及各种failover。</li>
+<li>zookeeper：kafka通过zookeeper来存储集群的meta信息。<h4 id="zookeeper节点中kafka存储结构"><a href="#zookeeper节点中kafka存储结构" class="headerlink" title="zookeeper节点中kafka存储结构"></a>zookeeper节点中kafka存储结构</h4></li>
+</ol>
+<p><img src="/lfhboke.github.io/css/images/zookeeper1.png" alt="kafka在zookeeper中存储结构"></p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2018/10/13/消息中间件之kafka-原理篇/" data-id="cjn7jqn40000640udeyfwnqtb" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2018/10/13/消息中间件之kafka-原理篇/" data-id="cjn7tlnc000077wudutxn1jm1" class="article-share-link">Share</a>
       
       
     </footer>
