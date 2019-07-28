@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="utf-8">
+  
+
+  
+  <title>elasticsearch全文搜索探究（多词查询） | lfh&#39;s bokes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="多词查询如果我们一次只能搜索一个词，那么全文搜索就会不太灵活，幸运的是match查询让多词变得简单：12345678GET /my_index/my_type/_search&amp;#123;	&amp;quot;query&amp;quot;:&amp;#123;    	&amp;quot;match&amp;quot;:&amp;#123;        	&amp;quot;title&amp;quot;:&amp;quot;BROWN DOG!&amp;quot;">
+<meta property="og:type" content="article">
+<meta property="og:title" content="elasticsearch全文搜索探究（多词查询）">
+<meta property="og:url" content="https://linfordhu.github.io/lfhboke.github.io/2019/07/13/elasticsearch全文搜索探究（多词查询）/index.html">
+<meta property="og:site_name" content="lfh&#39;s bokes">
+<meta property="og:description" content="多词查询如果我们一次只能搜索一个词，那么全文搜索就会不太灵活，幸运的是match查询让多词变得简单：12345678GET /my_index/my_type/_search&amp;#123;	&amp;quot;query&amp;quot;:&amp;#123;    	&amp;quot;match&amp;quot;:&amp;#123;        	&amp;quot;title&amp;quot;:&amp;quot;BROWN DOG!&amp;quot;">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2019-07-14T01:29:38.137Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="elasticsearch全文搜索探究（多词查询）">
+<meta name="twitter:description" content="多词查询如果我们一次只能搜索一个词，那么全文搜索就会不太灵活，幸运的是match查询让多词变得简单：12345678GET /my_index/my_type/_search&amp;#123;	&amp;quot;query&amp;quot;:&amp;#123;    	&amp;quot;match&amp;quot;:&amp;#123;        	&amp;quot;title&amp;quot;:&amp;quot;BROWN DOG!&amp;quot;">
+  
+    <link rel="alternate" href="/lfhboke.github.io/atom.xml" title="lfh&#39;s bokes" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link rel="stylesheet" href="/lfhboke.github.io/css/style.css">
+</head>
+</html>
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/lfhboke.github.io/" id="logo">lfh&#39;s bokes</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/">Home</a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/lfhboke.github.io/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://linfordhu.github.io/lfhboke.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-elasticsearch全文搜索探究（多词查询）" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2019/07/13/elasticsearch全文搜索探究（多词查询）/" class="article-date">
+  <time datetime="2019-07-13T08:16:22.000Z" itemprop="datePublished">2019-07-13</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      elasticsearch全文搜索探究（多词查询）
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h3 id="多词查询"><a href="#多词查询" class="headerlink" title="多词查询"></a>多词查询</h3><p>如果我们一次只能搜索一个词，那么全文搜索就会不太灵活，幸运的是match查询让多词变得简单：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">GET /my_index/my_type/_search</span><br><span class="line">&#123;</span><br><span class="line">	&quot;query&quot;:&#123;</span><br><span class="line">    	&quot;match&quot;:&#123;</span><br><span class="line">        	&quot;title&quot;:&quot;BROWN DOG!&quot;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>上面这个查询返回所有四个文档：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">	&quot;hits&quot;:[</span><br><span class="line">    	&#123;</span><br><span class="line">        	&quot;_id&quot;: &quot;4&quot;,</span><br><span class="line">            &quot;_score&quot;: 0.73185337,</span><br><span class="line">            &quot;_source&quot;&#123;&#125;</span><br><span class="line">        &#125;</span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>因为match查询必须查找两个词，它在内部实际上先执行两次term查询，然后将两次查询的结果合并作为最终结果输出。为了做到这点，它将两个term查询包入一个bool查询中。</p>
+<h4 id="提高精度"><a href="#提高精度" class="headerlink" title="提高精度"></a>提高精度</h4><p>用任意查询词项匹配文档可能会导致结果中出现不相关的长尾。这是种散弹式搜索。可能我们只想搜索包含所有词项的文档，也就是说，不去匹配brown OR dog，而通过匹配brown AND dog找到所有文档。match查询还可以接受operator操作符作为输入参数，默认情况下该操作是or。可以修改成and让所有指定词项都必须匹配：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">GET /my_index/my_type/_search</span><br><span class="line">&#123;</span><br><span class="line">	<span class="string">"query"</span>:&#123;</span><br><span class="line">    	<span class="string">"match"</span>:&#123;</span><br><span class="line">        	<span class="string">"title"</span>:&#123;</span><br><span class="line">            	<span class="string">"query"</span>:<span class="string">"BROWN DOG!"</span>,</span><br><span class="line">                <span class="string">"operator"</span>:<span class="string">"and"</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h4 id="控制精度"><a href="#控制精度" class="headerlink" title="控制精度"></a>控制精度</h4><p>在所有与任意间二选一有点过于非黑即白。如果用户给定5个查询词项，想查找只包含其中4个的文档，该如何处理？</p>
+<p>match查询支持minimum_should_match最小匹配参数，这让我们可以指定必须匹配的词项数用来表示一个文档是否相关。我们可以将其设置为某个具体数字，更常用的做法是将其设置为一个百分数。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">GET /my_index/my_type/_search</span><br><span class="line">&#123;</span><br><span class="line">	<span class="string">"query"</span>:&#123;</span><br><span class="line">    	<span class="string">"match"</span>:&#123;</span><br><span class="line">        	<span class="string">"title"</span>:&#123;</span><br><span class="line">            	<span class="string">"query"</span>:<span class="string">"quick brown dog"</span>,</span><br><span class="line">                <span class="string">"minimum_should_match"</span>:<span class="string">"75%"</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>当给定百分比的时候。minimum_should_match会做合适的事情：在之前三词项的示例中，75%会自动被截断成66.6%。即三个里面两个词。无论这个值设置成什么，至少包含一个词项的文档才会被认为是匹配的。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/07/13/elasticsearch全文搜索探究（多词查询）/" data-id="cjyms8jsw000idwude86bebot" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/lfhboke.github.io/2019/07/14/spring拦截器HandlerInterceptor/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          spring拦截器HandlerInterceptor
+        
+      </div>
+    </a>
+  
+  
+    <a href="/lfhboke.github.io/2019/07/13/elasticsearch全文搜索探究（匹配查询）/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">elasticsearch全文搜索探究（匹配查询）</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/07/">July 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/06/">June 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/05/">May 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/03/">March 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2018/10/">October 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/07/">July 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/04/">April 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/09/">September 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/07/">July 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/06/">June 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/01/">January 2016</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/27/netty入门应用/">netty入门应用</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/21/netty开篇/">netty开篇</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/14/web-xml配置文件详解/">web.xml配置文件详解</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/14/spring过滤器/">spring过滤器</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/14/spring拦截器HandlerInterceptor/">spring拦截器HandlerInterceptor</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2019 lfhu<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/lfhboke.github.io/" class="mobile-nav-link">Home</a>
+  
+    <a href="/lfhboke.github.io/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/lfhboke.github.io/fancybox/jquery.fancybox.css">
+  <script src="/lfhboke.github.io/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/lfhboke.github.io/js/script.js"></script>
+
+
+
+  </div>
+</body>
+</html>

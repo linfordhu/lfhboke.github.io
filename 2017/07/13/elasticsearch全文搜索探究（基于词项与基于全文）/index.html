@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="utf-8">
+  
+
+  
+  <title>elasticsearch全文搜索探究（基于词项与基于全文） | lfh&#39;s bokes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="所有查询会或多或少的执行相关度计算，但不是所有查询都有分析阶段。和一些特殊的完全不会对文本进行操作的查询不同，文本查询可以划分为两大家族： 基于词项的查询如term或fuzzy这样的底层查询不需要分析阶段，它们对单个词项进行操作。用term查询词项Foo只要在倒排索引中查找准确词项，并且用TF/IDF算法为每个包含该词项的文档计算相关度评分_score。 记住term查询只对倒排索引的词项精确匹配">
+<meta property="og:type" content="article">
+<meta property="og:title" content="elasticsearch全文搜索探究（基于词项与基于全文）">
+<meta property="og:url" content="https://linfordhu.github.io/lfhboke.github.io/2017/07/13/elasticsearch全文搜索探究（基于词项与基于全文）/index.html">
+<meta property="og:site_name" content="lfh&#39;s bokes">
+<meta property="og:description" content="所有查询会或多或少的执行相关度计算，但不是所有查询都有分析阶段。和一些特殊的完全不会对文本进行操作的查询不同，文本查询可以划分为两大家族： 基于词项的查询如term或fuzzy这样的底层查询不需要分析阶段，它们对单个词项进行操作。用term查询词项Foo只要在倒排索引中查找准确词项，并且用TF/IDF算法为每个包含该词项的文档计算相关度评分_score。 记住term查询只对倒排索引的词项精确匹配">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2019-07-13T07:13:34.694Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="elasticsearch全文搜索探究（基于词项与基于全文）">
+<meta name="twitter:description" content="所有查询会或多或少的执行相关度计算，但不是所有查询都有分析阶段。和一些特殊的完全不会对文本进行操作的查询不同，文本查询可以划分为两大家族： 基于词项的查询如term或fuzzy这样的底层查询不需要分析阶段，它们对单个词项进行操作。用term查询词项Foo只要在倒排索引中查找准确词项，并且用TF/IDF算法为每个包含该词项的文档计算相关度评分_score。 记住term查询只对倒排索引的词项精确匹配">
+  
+    <link rel="alternate" href="/lfhboke.github.io/atom.xml" title="lfh&#39;s bokes" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link rel="stylesheet" href="/lfhboke.github.io/css/style.css">
+</head>
+</html>
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/lfhboke.github.io/" id="logo">lfh&#39;s bokes</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/">Home</a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/lfhboke.github.io/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://linfordhu.github.io/lfhboke.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-elasticsearch全文搜索探究（基于词项与基于全文）" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2017/07/13/elasticsearch全文搜索探究（基于词项与基于全文）/" class="article-date">
+  <time datetime="2017-07-13T06:46:35.000Z" itemprop="datePublished">2017-07-13</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      elasticsearch全文搜索探究（基于词项与基于全文）
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>所有查询会或多或少的执行相关度计算，但不是所有查询都有分析阶段。和一些特殊的完全不会对文本进行操作的查询不同，文本查询可以划分为两大家族：</p>
+<h4 id="基于词项的查询"><a href="#基于词项的查询" class="headerlink" title="基于词项的查询"></a>基于词项的查询</h4><p>如term或fuzzy这样的底层查询不需要分析阶段，它们对单个词项进行操作。用term查询词项Foo只要在倒排索引中查找准确词项，并且用TF/IDF算法为每个包含该词项的文档计算相关度评分_score。</p>
+<p>记住term查询只对倒排索引的词项精确匹配，这点很重要，它不会对词的多样性进行处理（如，foo或FOO）。这里，无须考虑词项是如何存入索引的。如果是将[“Foo,””Bar”]索引存入一个不分析的（not_analyzed）包含精确值的字段，或者将Foo Bar索引到一个带有whitespace空格分析器的字段，两者的结果都会是在倒排索引中有Foo和Bar这两个词。</p>
+<h4 id="基于全文的查询"><a href="#基于全文的查询" class="headerlink" title="基于全文的查询"></a>基于全文的查询</h4><p>像match或query_string这样的查询是高层查询，它们了解字段映射的信息：</p>
+<ol>
+<li>如果查询日期（date）或整数（integer）字段，它们会将查询字符串分别作为日期或整数对待。</li>
+<li>如果查询一个（not_analyzed）未分析的精确值字符串字段，它们会将整个查询字符串作为单个词项对待。</li>
+<li><p>但如果要查询一个（analyzed）已分析的全文字段，它们会先将查询字符串传递到一个合适的分析器，然后生成一个供查询的词项列表。<br>一旦组成了词项列表，这个查询会对每个词项逐一执行底层的查询，再将结果合并，然后为每个文档生成一个最终的相关度评分。</p>
+<p> 当我们想要查询一个具有精确值的not_analyzed未分析字段之前，需要考虑，是否真的采用评分查询，或者非评分查询会更好。<br> 单词项查询通常可以用是、非这种二元问题表示，所以更适用过滤，而且这样做可以有效利用缓存：</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">GET /_search</span><br><span class="line">&#123;</span><br><span class="line">	&quot;query&quot;:&#123;</span><br><span class="line">    	&quot;constant_score&quot;:&#123;</span><br><span class="line">        	&quot;filter&quot;:&#123;</span><br><span class="line">            	&quot;term&quot;:&#123;</span><br><span class="line">                	&quot;gender&quot;:&quot;female&quot;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ol>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2017/07/13/elasticsearch全文搜索探究（基于词项与基于全文）/" data-id="cjyms8jsl000gdwudns7vayph" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/lfhboke.github.io/2017/09/14/Mybatis之SqlSession四大对象/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          Mybatis之SqlSession四大对象
+        
+      </div>
+    </a>
+  
+  
+    <a href="/lfhboke.github.io/2017/06/29/Spring源码解析—/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">Spring源码解析(springMVC初始化流程)</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/07/">July 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/06/">June 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/05/">May 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/03/">March 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2018/10/">October 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/07/">July 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/04/">April 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/09/">September 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/07/">July 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/06/">June 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/01/">January 2016</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/27/netty入门应用/">netty入门应用</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/21/netty开篇/">netty开篇</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/14/web-xml配置文件详解/">web.xml配置文件详解</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/14/spring过滤器/">spring过滤器</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/14/spring拦截器HandlerInterceptor/">spring拦截器HandlerInterceptor</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2019 lfhu<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/lfhboke.github.io/" class="mobile-nav-link">Home</a>
+  
+    <a href="/lfhboke.github.io/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/lfhboke.github.io/fancybox/jquery.fancybox.css">
+  <script src="/lfhboke.github.io/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/lfhboke.github.io/js/script.js"></script>
+
+
+
+  </div>
+</body>
+</html>

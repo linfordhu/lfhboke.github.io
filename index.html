@@ -62,6 +62,392 @@
       <div class="outer">
         <section id="main">
   
+    <article id="post-netty入门应用" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2019/07/27/netty入门应用/" class="article-date">
+  <time datetime="2019-07-27T11:40:15.000Z" itemprop="datePublished">2019-07-27</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/lfhboke.github.io/2019/07/27/netty入门应用/">netty入门应用</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h4 id="Netty服务端开发"><a href="#Netty服务端开发" class="headerlink" title="Netty服务端开发"></a>Netty服务端开发</h4><p>作为第一个Netty的应用例程哪个，为了能够将精力集中在Netty的使用上，以时间服务器为例进行源码开发和代码讲解。</p>
+<p>使用NIO进行服务端开发的步骤。</p>
+<ol>
+<li>创建ServerSocketChannel，配置它为非阻塞模式；</li>
+<li>绑定监听，配置TCP参数，例如backlog大小；</li>
+<li>创建一个独立的IO线程，用于轮询多路复用器Selector；</li>
+<li>创建Selector，将之前创建的ServrSocketChannl注册到Selector上，监听SelectionKey.ACCEPT；</li>
+<li>启动IO线程，在循环体中执行Selector.select()方法，轮询就绪的Channel；</li>
+<li>当轮询到了处于就绪状态的Channel时，需要对其进行判断，如果是OP_ACCEPT状态，说明是新的客户端接入，则调用ServerSocketChannel.accept()方法接受新的客户端；</li>
+<li>设置新接入的客户端链路SocketChannel为非阻塞模式，配置其他的一些TCP参数；</li>
+<li>将SocketChannel注册到Selector，监听OP_READ操作位；</li>
+<li>如果轮询的Channel为OP_READ，则说明SocketChannel中有新的就绪的数据包需要读取，则构造ByteBuffer对象，读取数据包；</li>
+<li>如果轮询的Channel为OP_WRITE，说明还有数据没有发送完成，需要继续发送。</li>
+</ol>
+<p>现在，看看Netty如何开发服务端。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TimeServer</span> </span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">bind</span><span class="params">(<span class="keyword">int</span> port)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    	EventLoopGroup bossGroup = <span class="keyword">new</span> NioEventLoopGroup();</span><br><span class="line">        EventLoopGroup workerGroup = <span class="keyword">new</span> NioEventLoopGroup();</span><br><span class="line">        <span class="keyword">try</span>&#123;</span><br><span class="line">        	ServerBootstrap b = <span class="keyword">new</span> ServerBootstrap();</span><br><span class="line">            b.group(bossGroup, workerGroup)</span><br><span class="line">            	.channl(NioServerSocketChannel.class)</span><br><span class="line">                .option(ChannelOption.SO_BACKLOG,<span class="number">1024</span>)</span><br><span class="line">                .childHandler(<span class="keyword">new</span> ChildChannelHandler());</span><br><span class="line">            ChannelFuture f = b.bind(port).sync();</span><br><span class="line">            f.channel().closeFuture().sync();</span><br><span class="line">        &#125;<span class="keyword">finally</span>&#123;</span><br><span class="line">        	bossGroup.shutdownGracefully();</span><br><span class="line">            workerGroup.shutdownGracefully();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">ChildChannelHandler</span> <span class="keyword">extends</span> <span class="title">ChannelIntializer</span>&lt;<span class="title">SocketChannl</span>&gt; </span>&#123;</span><br><span class="line">    	<span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(SocketChannel arg0)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        	arg0.pipeline().addLast(<span class="keyword">new</span> TimeServerHandler());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    	<span class="keyword">int</span> port = <span class="number">8080</span>;</span><br><span class="line">        <span class="keyword">if</span>(args != <span class="keyword">null</span> &amp;&amp; args.length &gt; <span class="number">0</span>) &#123;</span><br><span class="line">        	<span class="keyword">try</span> &#123;</span><br><span class="line">            	port = Integer.valueOf(args[<span class="number">0</span>]);</span><br><span class="line">            &#125;<span class="keyword">catch</span>()&#123;&#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">new</span> TimeServer().bind(port);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>从bind方法开始学习，在代码20~21行创建了两个NioEventLoopGroup实例。NioEvent LoopGroup是个线程组，它包含了一组NIO线程，专门用于网络事件的处理，实际上它们就是Reactor线程组。这里创建两个的原因是一个用于服务端接收客户端的连接，另一个用于进行SocketChannel的网络读写。第23行创建ServerBootstrap对象，它是Netty用于启动NIO服务端的辅助启动类，目的是降低服务端的开发复杂度。第24行调用ServerBootstrap的group方法，将两个NIO线程组当作入参传递到ServerBootstrap中。接着设置创建的Channel为NioServerSocketChannel，它的功能对应于JDK NIO类库中的ServerSocketChannel类。然后配置NioServerSocketChannel的TCP参数，此处将它的backlog设置为1024，最后绑定IO事件的处理类ChildChannelHandler，它的作用类似于Reactor模式中的Handler类，主要用于处理网络IO事件，例如记录日志、对消息进行编解码等。</p>
+<p>服务端启动辅助类配置完成之后，调用它的bind方法绑定监听端口，随后，调用它的同步阻塞方法sync等待绑定操作完成。完成之后Netty会返回一个ChannelFuture，它的功能类似于JDK的java.util.concurrent.Future，主要用于异步操作的通知回调。</p>
+<p>第32行使用f.channel().closFutur().sync()方法进行阻塞，等待服务端链路关闭之后main函数才退出。</p>
+<p>第34~36行调用NIO线程组的shutdownGracefully进行优雅退出，它会释放跟shutdownGracefully相关联的资源。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TimeServerHandler</span> <span class="keyword">extends</span> <span class="title">ChannelHandlerAdapter</span> </span>&#123;</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">channlRead</span><span class="params">(ChannelHandlerContext ctx, Objct msg)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    	ByteBuf buf = (ByteBuf) msg;</span><br><span class="line">        <span class="keyword">byte</span>[] req = <span class="keyword">new</span> <span class="keyword">byte</span>[buf.readableBytes()];</span><br><span class="line">        buf.readBytes(req);</span><br><span class="line">        String body = <span class="keyword">new</span> String(req, <span class="string">"UTF-8"</span>);</span><br><span class="line">        System.out.println(<span class="string">"The time server receive order:"</span> + body);</span><br><span class="line">        String currentTime = <span class="string">"QUERY TIME ORDER"</span>.equalsIgnoreCase(body)?<span class="keyword">new</span> java.util.Date(System.currentTimeMillis()).toString():<span class="string">"BAD ORDER"</span>;</span><br><span class="line">        ByteBuf resp = Unpooled.copiedBuffer(currentTime.getBytes());</span><br><span class="line">        ctx.write(resp);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">channelReadComplete</span><span class="params">(ChannelHandlerContext ctx)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    	ctx.flush();</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">exceptionCaught</span><span class="params">(ChannelHandlerContext ctx, Throwable <span class="keyword">case</span>)</span> </span>&#123;</span><br><span class="line">    	ctx.close();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>TimeServerHandler继承自ChannelHandlerAdapter，它用于对网络事件进行读写操作，通常只需要关注channelRead和excptionCaught方法。下面对这两个方法进行简单说明。</p>
+<p>第17行做类型转换，将msg转换成Netty的ByteBuf对象。ByteBuf类似于JDK中的java.nio.ByteBuffer对象，不过它提供了更加强大和灵活的功能。通过ByteBuf的readableBytes方法可以获取缓冲区可读的字节数，根据可读的字节数创建byte数组，通过ByteBuf的readBytes方法将缓冲区中的字节数组复制到新建的byte数组中，最后通过new String构造函数获取请求消息。这时对请求消息进行判断，如果是”QUERY TIME ORDER”则创建应答消息，通过ChannelHandlerContext的write方法异步发送应答消息给客户端。</p>
+<p>第30行调用了ChannelHandlerContext的flush方法，它的作用是将消息发送队列中的消息写入到SocketChannel中发送给对方。从性能角度考虑，为了防止频繁地唤醒selector进行消息发送，Netty的write方法并不直接将消息写入SocketChannel中，调用write方法只是把待发送的消息放到发送缓冲数组中，再通过调用flush方法，将发送缓冲区中的消息全部写到SocketChannel中。</p>
+<h4 id="Netty客户端开发"><a href="#Netty客户端开发" class="headerlink" title="Netty客户端开发"></a>Netty客户端开发</h4><p>Netty客户端开发相比服务端更简单。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TimClient</span> </span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">connect</span><span class="params">(<span class="keyword">int</span> port, String host)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    	EventLoopGroup group = <span class="keyword">new</span> NioEventLoopGroup();</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">        	Bootstrap b = <span class="keyword">new</span> Bootstrap();</span><br><span class="line">            b.group(group).channel(NioSocketChannel.class)</span><br><span class="line">            	.option(<span class="keyword">new</span> ChannelInitializer&lt;SocketChannel&gt;()&#123;</span><br><span class="line">                	<span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(SocketChannel ch)</span> throw Exception </span>&#123;</span><br><span class="line">                    	ch.pipeline().addLast(<span class="keyword">new</span> TimeClientHandler());</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;);</span><br><span class="line">            ChannelFuture f = b.connect(host, port).sync();</span><br><span class="line">        &#125;<span class="keyword">finally</span> &#123;</span><br><span class="line">        	group.shutdownGracefully();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    	<span class="keyword">int</span> port = <span class="number">8080</span>;</span><br><span class="line">        <span class="keyword">if</span>(args != <span class="keyword">null</span> &amp;&amp; args.length &gt; <span class="number">0</span>) &#123;</span><br><span class="line">        	<span class="keyword">try</span> &#123;</span><br><span class="line">            	port = Integer.valueOf(args[<span class="number">0</span>]);</span><br><span class="line">            &#125; <span class="keyword">catch</span>()&#123;&#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">new</span> TimeClient().connect(port, <span class="string">"127.0.0.1"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>从connect，在第20行首先创建客户端IO读写的NioEventLoopGroup线程组，然后继续创建客户端辅助启动类Bootstrap，随后需要对其进行配置。与服务端不同的是，它的Channel需要设置为NioSocketChannel，然后为其添加Handler。此处为了简单直接创建匿名内部类，实现initChannel方法，其作用是当创建NioSocktChannel成功之后，在进行初始化时，将它的ChannelHandler设置到ChannelPipeline中，用于处理网络IO事件。</p>
+<p>客户端启动辅助类设置完成之后，调用connect方法发起异步连接，然后调用同步方法等待连接成功。</p>
+<p>最后，当客户端连接关闭之后，客户端主函数退出，退出之前释放NIO线程组的资源。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TimeClientHandler</span> <span class="keyword">extends</span> <span class="title">ChannlHandlrAdapter</span> </span>&#123;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> ByteBuf firstMessage;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">TimeClientHandler</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    	<span class="keyword">byte</span>[] req = <span class="string">"QUERY TIME ORDER"</span>.getBytes();</span><br><span class="line">        firstMessag = Unpooled.buffer(req.length);</span><br><span class="line">        firstMessage.writeBytes(req);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">channelActive</span><span class="params">(ChannelHandlerContext ctx)</span> </span>&#123;</span><br><span class="line">    	ctx.writeAndFlush(firstMessage);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">channlRead</span><span class="params">(ChannelHandlerContext ctx, Object msg)</span> </span>&#123;</span><br><span class="line">    	ByteBuf buf = (ByteBuf) msg;</span><br><span class="line">        <span class="keyword">byte</span>[] req = <span class="keyword">new</span> <span class="keyword">byte</span>[buf.readableBytes()];</span><br><span class="line">        buf.readBytes(req);</span><br><span class="line">        String body = <span class="keyword">new</span> String(req. <span class="string">"UTF-8"</span>);</span><br><span class="line">        System.out.println(<span class="string">"Now is:"</span>+body);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">exceptionCaught</span><span class="params">(ChannelHandlerContext ctx, Throwable cause)</span> </span>&#123;</span><br><span class="line">    	ctx.close();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>这里关注：channelActive、channelRead和exceptionCaught。当客户端和服务端TCP链路建立成功之后，Netty的NIO线程会调用channelActive方法，发送查询时间的指令给服务端，调用ChannelHandlerContext的writeAndFlush方法将请求消息发送给服务端。</p>
+<p>当服务端返回应答消息时，channelRead方法被调用，第39~43行从Netty的ByteBuf中读取并打印应答消息。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/07/27/netty入门应用/" data-id="cjyms8jv8000zdwudsyddwk4g" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-netty开篇" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2019/07/21/netty开篇/" class="article-date">
+  <time datetime="2019-07-21T03:41:47.000Z" itemprop="datePublished">2019-07-21</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/lfhboke.github.io/2019/07/21/netty开篇/">netty开篇</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h4 id="IO编程"><a href="#IO编程" class="headerlink" title="IO编程"></a>IO编程</h4><p>举一个场景的例子：客户端每隔两秒发送一个带有时间戳的”hello world”给服务端，服务端收到之后打印。<br>现在通过几种不同的IO方式编程实现<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// IOServer.java</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">IOServer</span> </span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    	ServerSocket serverSocket = <span class="keyword">new</span> ServerSocket(<span class="number">8000</span>);</span><br><span class="line">        <span class="keyword">new</span> Thread(() -&gt; &#123;</span><br><span class="line">        	<span class="keyword">while</span>(<span class="keyword">true</span>) &#123;</span><br><span class="line">            	Socket socket = serverSocket.accept();</span><br><span class="line">                <span class="keyword">new</span> Thread() -&gt; &#123;</span><br><span class="line">                	<span class="keyword">try</span> &#123;</span><br><span class="line">                    	<span class="keyword">byte</span>[] data = <span class="keyword">new</span> <span class="keyword">byte</span>[<span class="number">1024</span>];</span><br><span class="line">                        InputStream inputStream = socket.getInputStream();</span><br><span class="line">                        <span class="keyword">while</span>(<span class="keyword">true</span>) &#123;</span><br><span class="line">                        	<span class="keyword">int</span> len;</span><br><span class="line">                            <span class="keyword">while</span>((len = inputStream.read(data)) != -<span class="number">1</span>) &#123;</span><br><span class="line">                            	System.out.println(<span class="keyword">new</span> String(data, <span class="number">0</span>, len));</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125; <span class="keyword">catch</span>(Exception e) &#123;&#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;).start();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>server端首先创建了一个serverSocket来监听8000端口，然后创建一个线程，线程里面不断调用阻塞方法serversocket.accept();获取新的连接，见(1)，当获取到新的连接之后，给每条连接创建一个新的线程，这个线程负责从该连接中读取数据，然后读取数据是以字节流的方式。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">IOClient</span> </span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">    	<span class="keyword">new</span> Thread(() -&gt; &#123;</span><br><span class="line">        	<span class="keyword">try</span>&#123;</span><br><span class="line">            	Socket socket = <span class="keyword">new</span> Socket(<span class="string">"127.0.0.1"</span>, <span class="number">8000</span>);</span><br><span class="line">                <span class="keyword">while</span>(<span class="keyword">true</span>) &#123;</span><br><span class="line">                	<span class="keyword">try</span>&#123;</span><br><span class="line">                    	socket.getOutputStream().write((<span class="keyword">new</span> Date() + <span class="string">":hello world"</span>).getBytes());</span><br><span class="line">                        socket.getOutputStream().flush();</span><br><span class="line">                        Thread.sleep(<span class="number">2000</span>);</span><br><span class="line">                    &#125;<span class="keyword">catch</span>(Exception e)&#123;&#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;<span class="keyword">catch</span>(Exception e)&#123;&#125;</span><br><span class="line">        &#125;).start();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>IO编程模型在客户端较少的情况下运行良好，但是对于客户端比较多的业务来说，单机服务端可能需要支撑成千上万的连接，IO模型可能就不太合适了。</p>
+<p>上面的demo，从服务端代码中我们可以看到，在传统的IO模型中，每个连接创建成功之后都需要一个线程来维护，每个线程包含一个while死循环，那么1w个连接对应1w个线程，继而1w个while死循环，这就带来了如下问题：</p>
+<ol>
+<li>线程资源受限：线程是操作系统中非常宝贵的资源，同一时刻有大量的线程处于阻塞状态是非常严重的资源浪费，操作系统耗不起。</li>
+<li>线程切换效率低下：单机cpu核数固定，线程爆炸之后操作系统频繁进行线程切换，应用性能急剧下降。</li>
+<li>除了以上两个问题，IO编程中，我们看到数据读写是以字节流为单位，效率不高。<h4 id="NIO编程"><a href="#NIO编程" class="headerlink" title="NIO编程"></a>NIO编程</h4>关于NIO相关的文章网上也有很多，这里不打算详细深入分析，下面简单描述一下NIO是如何解决以上三个问题的。<h5 id="线程资源受限"><a href="#线程资源受限" class="headerlink" title="线程资源受限"></a>线程资源受限</h5>NIO编程模型中，新来一个连接不再创建一个新的线程，而是可以把这条连接直接绑定到某个固定的线程，然后这条连接所有的读写都由这个线程来负责，那么他是怎么做到？<br><img src="/lfhboke.github.io/css/images/netty.PNG" alt="netty"><br>如上图，IO模型中，一个连接来了，会创建一个线程，对应一个while死循环，死循环的目的就是不断监测这条连接上是否有数据可以读，大多数情况下，1w个连接里面同一时刻只有少量的连接有数据可读，因此，很多个while死循环都浪费掉了，因为读不出啥数据。</li>
+</ol>
+<p>而NIO模型中，他把这么多while死循环变成一个死循环，这个死循环由一个线程控制，那么他又是如何做到一个线程，一个while死循环就能监测1w个连接是否有数据可读的呢？</p>
+<p>这就是NIO模型中selector的作用，一条连接来了之后，现在不创建一个while死循环去监听是否有数据可读了，而是直接把这条连接注册到selector上，然后，通过检查这个selector，就可以批量监测出有数据可读的连接，进而读取数据，下面我再举个非常简单的生活中的例子说明IO与NIO的区别。</p>
+<h5 id="线程切换效率低下"><a href="#线程切换效率低下" class="headerlink" title="线程切换效率低下"></a>线程切换效率低下</h5><p>由于NIO模型中线程数量大大降低，线程切换效率因此也大幅度提高</p>
+<h5 id="IO读写以字节为单位"><a href="#IO读写以字节为单位" class="headerlink" title="IO读写以字节为单位"></a>IO读写以字节为单位</h5><p>NIO解决这个问题的方式是数据读写不再以字节为单位，而是以字节块为单位。而是以字节块为单位。IO模型中，每次都是从操作系统底层一个字节一个字节地读取数据，而NIO维护一个缓冲区，每次可以从这个缓冲区里面读取一块的数据。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//NIOServer.java</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NIOServer</span> </span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    	Selector serverSelector = Selector.open();</span><br><span class="line">        Selector clientSelector = Selector.open();</span><br><span class="line">        <span class="keyword">new</span> Thread(() -&gt; &#123;</span><br><span class="line">        	<span class="keyword">try</span>&#123;</span><br><span class="line">            	ServerSocketChannel listenerChannel = ServerSocketChannel.open();</span><br><span class="line">                listenerChannel.socket().bind(<span class="keyword">new</span> InetSocketAddress(<span class="number">8000</span>));</span><br><span class="line">                listenerChannel.configureBlocking(<span class="keyword">false</span>);</span><br><span class="line">                listenerChannel.register(serverSelector, SelectionKey.OP_ACCEPT);</span><br><span class="line">                <span class="keyword">while</span>(<span class="keyword">true</span>) &#123;</span><br><span class="line">                	<span class="keyword">if</span>(serverSelector.select(<span class="number">1</span>) &gt; <span class="number">0</span>) &#123;</span><br><span class="line">                    	Set&lt;SelectionKey&gt; set = serverSelector.selectedKeys();</span><br><span class="line">                        Iterator&lt;SelectionKey&gt; keyIterator = set.iterator();</span><br><span class="line">                        <span class="keyword">while</span>(keyIterator.hasNext()) &#123;</span><br><span class="line">                        	SelectionKey key = keyIterator.next();</span><br><span class="line">                            <span class="keyword">if</span>(key.isAcceptable()) &#123;</span><br><span class="line">                            	<span class="keyword">try</span>&#123;</span><br><span class="line">                                	SocketChannel clientChannel = ((ServerSocketChannel) key.channel()).accept();</span><br><span class="line">                                    clientChannel.configureBlocking(<span class="keyword">false</span>);</span><br><span class="line">                                    clientChannel.register(clientSelector, SelectionKey.OP_READ);</span><br><span class="line">                                &#125;<span class="keyword">finally</span>&#123;</span><br><span class="line">                                	keyIterator.remove();</span><br><span class="line">                                &#125;</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;<span class="keyword">catch</span>(Exception e)&#123;&#125;</span><br><span class="line">        &#125;).start();</span><br><span class="line">        <span class="keyword">new</span> Thread(() -&gt; &#123;</span><br><span class="line">        	<span class="keyword">try</span>&#123;</span><br><span class="line">            	<span class="keyword">while</span>(<span class="keyword">true</span>) &#123;</span><br><span class="line">                	<span class="keyword">if</span>(clientSelector.select(<span class="number">1</span>)&gt;<span class="number">0</span>)&#123;</span><br><span class="line">                    	Set&lt;SelectionKey&gt; set = clientSelector.selectedKeys();</span><br><span class="line">                        Iterator&lt;SelectionKey&gt; keyIterator = set.iterator();</span><br><span class="line">                        <span class="keyword">while</span>(keyIterator.hasNext()) &#123;</span><br><span class="line">                        	SelectionKey key = keyIterator.next();</span><br><span class="line">                            <span class="keyword">if</span>(key.isReadable()) &#123;</span><br><span class="line">                            	<span class="keyword">try</span>&#123;</span><br><span class="line">                                	SocketChannel clientChannel = (SocketChannel) key.channel();</span><br><span class="line">                                    ByteBuffer byteBuffer = ByteBuffer.allocate(<span class="number">1024</span>);</span><br><span class="line">                                    clientChannel.read(byteBuffer);</span><br><span class="line">                                    byteBuffer.flip();</span><br><span class="line">                                    System.out.println(Charset.defaultCharset().newDecoder().decode(byteBuffer).toString());</span><br><span class="line">                                &#125;<span class="keyword">finally</span>&#123;</span><br><span class="line">                                	keyIterator.remove();</span><br><span class="line">                                    key.interestOps(SelectionKey.OP_READ);</span><br><span class="line">                                &#125;</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;<span class="keyword">catch</span>()&#123;&#125;</span><br><span class="line">        &#125;).start();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>解释一下核心思路：</p>
+<ol>
+<li>NIO模型中通常会有两个线程，每个线程绑定一个轮询器selector，在我们的例子中serverSelector负责轮询是否有新的连接，clientSelector负责轮询连接是否有数据可读。</li>
+<li>服务端监测到新的连接之后，不再创建一个新的线程，而是直接将新连接绑定到clientSelector上，这样就不用IO模型中1w个while循环在死等。</li>
+<li>clientSelector被一个while死循环包裹着，如果在某一时刻有多条连接有数据可读，那么通过clientSelector.select(1)方法可以轮询出来，进而批量处理。</li>
+<li>数据的读写以内存块为单位。<h4 id="Netty编程"><a href="#Netty编程" class="headerlink" title="Netty编程"></a>Netty编程</h4>Netty封装了JDK的NIO，更简便。<br>Netty是一个异步事件驱动的网络应用框架，用于快速开发可维护的高性能服务和客户端。</li>
+</ol>
+<p>使用Netty不使用JDK原生NIO的原因：</p>
+<ol>
+<li>使用JDK自带的NIO需要了解太多的概念，编程复杂，一不小心bug横飞。</li>
+<li>Netty底层IO模型随意切换，而这一切只需要做微小的改动，改改参数，Netty可以直接从NIO模型变身为IO模型。</li>
+<li>Netty自带的拆包解包，异常监测等机制让你从NIO的繁重细节中脱离出来，让你只需要关心业务逻辑。</li>
+<li>Netty解决了JDK的很多包括空轮询在内的bug</li>
+<li>Netty底层对线程，selector做了很多细小的优化，精心设计的reactor线程模型做到非常高效的并发处理</li>
+<li>自带各种协议栈让你处理任何一种通用协议都几乎不用亲自动手</li>
+<li>Netty社区活跃，遇到问题随时邮件列表或者issue</li>
+<li>Netty已经历各大rpc框架，消息中间件，分布式通信中间件线上的广泛验证，健壮性无比强大</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&lt;dependency&gt;</span><br><span class="line">	&lt;groupId&gt;io.netty&lt;/groupId&gt;</span><br><span class="line">    &lt;artifactId&gt;netty-all&lt;/artifactId&gt;</span><br><span class="line">    &lt;version&gt;4.1.6.Final&lt;/version&gt;</span><br><span class="line">&lt;/dependency&gt;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//NettyServer.java</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NettyServer</span></span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">    	ServerBootstrap serverBootstrap = <span class="keyword">new</span> ServerBootstrap();</span><br><span class="line">        NioEventLoopGroup boss = <span class="keyword">new</span> NioEventLoopGroup();</span><br><span class="line">        NioEventLoopGroup worker = <span class="keyword">new</span> NioEventLoopGroup();</span><br><span class="line">        serverBootstrap</span><br><span class="line">        	.group(boss, worker)</span><br><span class="line">            .channel(NioServerSocketChannel.class)</span><br><span class="line">            .childHandler(<span class="keyword">new</span> ChannelInitializer&lt;NioSocketChannel&gt;()&#123;</span><br><span class="line">            	<span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(NioSocketChannel ch)</span> </span>&#123;</span><br><span class="line">                	ch.pipeline().addLast(<span class="keyword">new</span> StringDecoder());</span><br><span class="line">                    ch.pipeline().addLast(<span class="keyword">new</span> SimpleChannelInboundHandler&lt;String&gt;()&#123;</span><br><span class="line">                    	<span class="meta">@Override</span></span><br><span class="line">                        <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">channelRead0</span><span class="params">(ChannelHandlerContext ctx, String msg)</span> </span>&#123;</span><br><span class="line">                        	System.out.println(msg);</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;)</span><br><span class="line">            .bind(<span class="number">8000</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ol>
+<li>boss对应，IOServer.java中的接受新连接线程，主要负责创建新连接</li>
+<li>worker对应IOClient.java中的负责读取数据的线程，主要用于读取数据以及业务逻辑处理</li>
+</ol>
+<p>下面是客户端NIO的实现<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NettyClient</span> </span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">    	Bootstrap bootstrap = <span class="keyword">new</span> Bootstrap();</span><br><span class="line">        NioEventLoopGroup group = <span class="keyword">new</span> NioEventLoopGroup();</span><br><span class="line">        </span><br><span class="line">        bootstrap.group(group)</span><br><span class="line">        	.channel(NioSocketChannel.class)</span><br><span class="line">            .handler(<span class="keyword">new</span> ChannelInitializer&lt;Channel&gt;()&#123;</span><br><span class="line">            	<span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initChannel</span><span class="params">(Channel ch)</span> </span>&#123;</span><br><span class="line">                	ch.pipeline().addLaset(<span class="keyword">new</span> StringEncoder());</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;);</span><br><span class="line">            Channel channel = bootstrap.connect(<span class="number">127.0</span>.0.1<span class="string">", 8000).channel();</span></span><br><span class="line"><span class="string">            while (true) &#123;</span></span><br><span class="line"><span class="string">            	channel.writeAndFlush(new Date() + "</span>:hello world!<span class="string">");</span></span><br><span class="line"><span class="string">                Thread.sleep(2000);</span></span><br><span class="line"><span class="string">            &#125;</span></span><br><span class="line"><span class="string">    &#125;</span></span><br><span class="line"><span class="string">&#125;</span></span><br></pre></td></tr></table></figure></p>
+<p>在客户端程序中，group对应了我们IOClient.java中main函数起的线程。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/07/21/netty开篇/" data-id="cjyms8jvc0010dwudr9vewus8" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-web-xml配置文件详解" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2019/07/14/web-xml配置文件详解/" class="article-date">
+  <time datetime="2019-07-14T07:36:59.000Z" itemprop="datePublished">2019-07-14</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/lfhboke.github.io/2019/07/14/web-xml配置文件详解/">web.xml配置文件详解</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h4 id="一、web-xml是什么？"><a href="#一、web-xml是什么？" class="headerlink" title="一、web.xml是什么？"></a>一、web.xml是什么？</h4><p>首先web.xml是java web项目的一个重要的配置文件，但是web.xml文件并不是Java Web工程必须的。</p>
+<p>web.xml文件是用来配置：欢迎页、servlet、filer等的。当你的web工程没用到这些时，可以不需要使用web.xml文件来配置你的web工程。</p>
+<h5 id="web-xml能做的事情："><a href="#web-xml能做的事情：" class="headerlink" title="web.xml能做的事情："></a>web.xml能做的事情：</h5><p>其实，web.xml的模式（Schema）文件中定义了多少种标签元素，web.xml中就可以出现它的模式文件所定义的标签元素，它就能拥有定义出来的那些功能。</p>
+<p>web.xml的模式文件是由Sun公司定义的，每个web.xml文件的根元素<web-app>中，都必须标明这个web.xml使用的是哪个模式文件。如：</web-app></p>
+<h4 id="二、web-xml详解："><a href="#二、web-xml详解：" class="headerlink" title="二、web.xml详解："></a>二、web.xml详解：</h4><h5 id="1-web-xml加载过程"><a href="#1-web-xml加载过程" class="headerlink" title="1.web.xml加载过程"></a>1.web.xml加载过程</h5><p>首先简单讲一下，web.xml的加载过程。当启动一个WEB项目时，首先会读取项目web.xml<br>配置文件里的配置，当这一步没有出错并且完成之后，项目才能正常的被启动起来。</p>
+<ol>
+<li>启动WEB项目的时候，容器首先会去它的配置文件web.xml读取两个节点：<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">2. 紧接着，容器创建一个ServletContext(application)，这个WEB项目所有部分都将共享这个上下文。</span><br><span class="line">3. 容器以```&lt;context-param&gt;&lt;/context-param&gt;```的name作为键，value作为值，将其转化为键值对，存入ServletContext。</span><br><span class="line">4. 容器创建```&lt;listener&gt;&lt;/listener&gt;```中的类实例，根据配置的class类路径```&lt;listener-class&gt;```来创建监听，在监听中会有contextInitialized(ServletContextEvent args)初始方法，启动Web应用时，系统调用Listener的该方法，在这个方法照中获得。</span><br><span class="line">5. 举例：你可能在项目启动之前就打开数据库，那么这里就可以在```&lt;context-param&gt;```中设置数据库的连接方式（驱动、url、user、password），在监听类中初始化数据库的连接。这个监听是自己写的一个类，除了初始化方法，它还有销毁方法，用于关闭应用前释放资源。比如：说数据库连接的关闭，此时，调用contextDestroyed(ServletContextEvent args)，关闭Web应用时，系统调用Listener的该方法。</span><br><span class="line">6. 接着，容器会读取```&lt;filter&gt;&lt;/filter&gt;```，根据指定的类路径来实例化过滤器。</span><br><span class="line">7. 以上都是在WEB项目还没有完全启动起来的时候就已经完成了的工作。如果系统中有Servlet，则Servlet是在第一次发起请求的时候被实例化的，而且一般不会被容器销毁，它可以服务于多个用户的请求。所以，Servlet的初始化都要比上面提到的那几个要迟。</span><br><span class="line">8. 总的来说，web.xml的加载顺序是：```&lt;context-param&gt;-&gt;&lt;listener&gt;-&gt;&lt;filer&gt;-&gt;&lt;servlet&gt;```。其中，如果web.xml中出现了相同的元素，则按照在配置文件中出现的先后顺序来加载。</span><br><span class="line">9. 对于某类元素而言，与它们出现的顺序是有关的。以```&lt;filter&gt;```为例，web.xml中当然可以定义多个filter，与filter相关的一个元素是```&lt;filter-mapping&gt;```，注意，对于拥有相同```&lt;filter-name&gt;```的filter和filter-mapping元素而言，filter-mapping必须出现在filter之后，否则当解析到filter-mapping时，它所对应的filter-name还未定义。web容器启动初始化每个filter时，按照filter出现的顺序来初始化的，当请求资源匹配多个filter-mapping时，filter拦截资源是按照filter-mapping元素出现的顺序来依次调用doFilter()方法的。servlet同filter类似。</span><br><span class="line">##### 2.web.xml标签详解</span><br><span class="line">###### 1.xml文档有效性检查</span><br><span class="line">1. web-app定义该文档（部署描述符，不是DTD文件）的根元素</span><br><span class="line">2. PUBLIC意味着DTD文件可以被公开使用</span><br><span class="line">3. -//Sun Microsysterms，Inc.//DTD Web Application 2.3//EN“意味着DTD由SunMicrosystems，Inc维护。”</span><br><span class="line">4. URL&quot;http://java.sun.com/dtd/web-app 2 3.dtd&quot;表示D文件的位置。</span><br><span class="line">##### 2.```&lt;web-app&gt;</span><br></pre></td></tr></table></figure></li>
+</ol>
+<p>部署描述符的根元素。</p>
+<p>这个元素含有23个子元素，而且子元素都是可选的。问号（？）表示子元素是可选的，而且只能出现一次。星号（<code>*</code>）表示子元素可在部署描述符中出现零次或多次。有些子元素还可以有自己的子元素。web.xml文件中web-app元素声明的是下面每个子元素的声明。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/07/14/web-xml配置文件详解/" data-id="cjyms8jtj000odwudfsymug9i" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-spring过滤器" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2019/07/14/spring过滤器/" class="article-date">
+  <time datetime="2019-07-14T03:32:08.000Z" itemprop="datePublished">2019-07-14</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/lfhboke.github.io/2019/07/14/spring过滤器/">spring过滤器</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <font color="red">过滤器是什么？</font><br><font color="red">过滤器是如何实现的？</font><br><font color="red">过滤器和拦截器的区别？</font><br><font color="red">过滤器的核心原理是什么（阅读源码）？</font>
+
+<h4 id="过滤器是什么？"><a href="#过滤器是什么？" class="headerlink" title="过滤器是什么？"></a>过滤器是什么？</h4><p>依赖于servlet容器。在实现上基于函数回调，可以对几乎所有请求进行过滤，但是缺点是一个过滤器实例只能在容器初始化时调用一次。使用过滤器的目的是用来做一些过滤操作。</p>
+<p>对所有请求进行过滤操作，获取请求携带的数据或者修改请求的某些参数。</p>
+<h4 id="过滤器的实现"><a href="#过滤器的实现" class="headerlink" title="过滤器的实现"></a>过滤器的实现</h4><h5 id="Spring自带的字符编码过滤器"><a href="#Spring自带的字符编码过滤器" class="headerlink" title="Spring自带的字符编码过滤器"></a>Spring自带的字符编码过滤器</h5><p>过滤器常用的场景：解决中文乱码问题。</p>
+<p>字符编码过滤器主要是过滤response响应。</p>
+<p>添加字符编码过滤器<br><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">//web.xml</span><br><span class="line"><span class="tag">&lt;<span class="name">filter</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">description</span>&gt;</span>字符集过滤器<span class="tag">&lt;/<span class="name">description</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">filter-name</span>&gt;</span>encodingFilter<span class="tag">&lt;/<span class="name">filter-name</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">filter-class</span>&gt;</span>org.springframework.web.filter.CharacterEncodingFilter<span class="tag">&lt;/<span class="name">filter-class</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">init-param</span>&gt;</span></span><br><span class="line">  	<span class="tag">&lt;<span class="name">param-name</span>&gt;</span>encoding<span class="tag">&lt;/<span class="name">param-name</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">param-value</span>&gt;</span>UTF-8<span class="tag">&lt;/<span class="name">param-value</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">init-param</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">init-param</span>&gt;</span></span><br><span class="line">  	<span class="tag">&lt;<span class="name">param-name</span>&gt;</span>forceEncoding<span class="tag">&lt;/<span class="name">param-name</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">param-value</span>&gt;</span>true<span class="tag">&lt;/<span class="name">param-value</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">init-param</span>&gt;</span></span><br><span class="line">  </span><br><span class="line">  <span class="tag">&lt;<span class="name">filter-mapping</span>&gt;</span></span><br><span class="line">  	<span class="tag">&lt;<span class="name">filter-name</span>&gt;</span>encodingFilter<span class="tag">&lt;/<span class="name">filter-name</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">url-pattern</span>&gt;</span>/*<span class="tag">&lt;/<span class="name">url-pattern</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">filter-mapping</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">filter</span>&gt;</span></span><br></pre></td></tr></table></figure></p>
+<pre><code>forceEncoding是强制字符集
+true处理请求和响应，相当于：
+request.setCharacterEncoding(&quot;&quot;);
+response.setCharacterEncoding(&quot;&quot;);
+false只处理请求，相当于
+request.setCharacterEncoding(&quot;&quot;);
+</code></pre><h5 id="自定义过滤器"><a href="#自定义过滤器" class="headerlink" title="自定义过滤器"></a>自定义过滤器</h5><p>写一个uri过滤器。</p>
+<p>主要还是对过滤器进行说明，cookie自动登陆只是写了点皮毛。</p>
+<p>uri过滤器主要实现的功能是：除了/login的uri，都要进行过滤处理，获取session值，看session里是否有用户信息，没有用户信息，就跳到登陆页面。</p>
+<h6 id="写个过滤器的类SessionFilter-class"><a href="#写个过滤器的类SessionFilter-class" class="headerlink" title="写个过滤器的类SessionFilter.class"></a>写个过滤器的类SessionFilter.class</h6><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SessionFilter</span> <span class="keyword">extends</span> <span class="title">OncePerRequestFilter</span> </span>&#123;</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">doFilterInternal</span><span class="params">(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)</span> <span class="keyword">throws</span> ServletException,IOException </span>&#123;</span><br><span class="line">    	String[] notFilter = <span class="keyword">new</span> String[]&#123;<span class="string">"/login"</span>&#125;;</span><br><span class="line">        String uri = request.getRequestURI();</span><br><span class="line">        System.out.println(<span class="string">"filter&gt;&gt;&gt;uri&gt;&gt;&gt;"</span>+uri);</span><br><span class="line">        <span class="keyword">boolean</span> doFilter = <span class="keyword">true</span>;</span><br><span class="line">        <span class="keyword">for</span>(String s: notFilter) &#123;</span><br><span class="line">        	<span class="keyword">if</span>(uri.indexOf(s)!=-<span class="number">1</span>)&#123;</span><br><span class="line">            	doFilter = <span class="keyword">false</span>;</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span>(doFilter) &#123;</span><br><span class="line">        	System.out.println(<span class="string">"doFilter&gt;&gt;&gt;"</span>);</span><br><span class="line">            Object obj = request.getSession().getAttribute(<span class="string">"user"</span>);</span><br><span class="line">            <span class="keyword">if</span>(obj == <span class="keyword">null</span>)&#123;</span><br><span class="line">            	System.out.println(<span class="string">"doFilter&gt;&gt;&gt;obj is null"</span>);</span><br><span class="line">                <span class="keyword">boolean</span> isAjaxRequest = isAjaxRequest(request);</span><br><span class="line">                <span class="keyword">if</span>(isAjaxRequest)&#123;</span><br><span class="line">                	response.setCharacterEncoding(<span class="string">"UTF-8"</span>);</span><br><span class="line">                    response.sendError(HttpStatus.UNAUTHORIZED.value(),<span class="string">"您已经太长时间没有操作，请刷新页面"</span>);</span><br><span class="line">                    System.out.println(<span class="string">"doFilter&gt;&gt;&gt;ajax request"</span>);</span><br><span class="line">                    <span class="keyword">return</span>;</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                	System.out.println(<span class="string">"doFilter&gt;&gt;&gt;httpRequest"</span>);</span><br><span class="line">                    response.sendRedirect(<span class="string">"./login"</span>);</span><br><span class="line">                    <span class="keyword">return</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            	User user = (User) obj;</span><br><span class="line">                System.out.println(<span class="string">"doFilter&gt;&gt;&gt;username&gt;&gt;&gt;"</span>+user.getUsername());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        	System.out.println(<span class="string">"no Filter&gt;&gt;&gt;"</span>);</span><br><span class="line">            filterChain.doFilter(request, response);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">isAjaxRequest</span><span class="params">(HttpServletRequest request)</span> </span>&#123;</span><br><span class="line">    	String header = request.getHeader(<span class="string">"X-Requested-With"</span>);</span><br><span class="line">        <span class="keyword">if</span>(header != <span class="keyword">null</span> &amp;&amp; <span class="string">"XMLHttpRequest"</span>.equals(header)) &#123;</span><br><span class="line">        	<span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        	<span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/07/14/spring过滤器/" data-id="cjyms8jtg000ndwudyccuoy5u" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-spring拦截器HandlerInterceptor" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2019/07/14/spring拦截器HandlerInterceptor/" class="article-date">
+  <time datetime="2019-07-14T02:25:45.000Z" itemprop="datePublished">2019-07-14</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/lfhboke.github.io/2019/07/14/spring拦截器HandlerInterceptor/">spring拦截器HandlerInterceptor</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h4 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h4><p>拦截器是基于web框架的调用，因此可以使用spring的依赖注入（DI）进行一些业务操作。在springMVC中就是依赖于springMVC框架。在实现上基于Java的反射机制，属于面向切面编程（AOP）的一种运用。</p>
+<h4 id="主要工作场景"><a href="#主要工作场景" class="headerlink" title="主要工作场景"></a>主要工作场景</h4><p>拦截器可以获取IOC容器中的各个bean，而过滤器就不行，所以在拦截器里注入一个service，可以调用业务逻辑。</p>
+<font color="red">拦截器只能对controller请求进行拦截，对其他的一些比如直接访问静态资源的请求则没办法进行拦截处理。</font>
+
+<h4 id="WebMvcConfigurerAdapter比较常用的重写接口"><a href="#WebMvcConfigurerAdapter比较常用的重写接口" class="headerlink" title="WebMvcConfigurerAdapter比较常用的重写接口"></a>WebMvcConfigurerAdapter比较常用的重写接口</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** 添加类型转换器和格式化器 */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addFormatters</span><span class="params">(FormatterRegistry registry)</span></span></span><br><span class="line"><span class="function"><span class="comment">/** 配置消息转换器 */</span></span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">configureMessageConverters</span><span class="params">(List&lt;HttpMessageConverter&lt;?&gt;&gt; converters)</span></span></span><br><span class="line"><span class="function"><span class="comment">/** 解决跨域问题 */</span></span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addCorsMappings</span><span class="params">(CorsRegistry registry)</span></span>;</span><br><span class="line"><span class="comment">/** 添加拦截器 */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">addInterceptors</span><span class="params">(InterceptorRegistry registry)</span></span>;</span><br><span class="line"><span class="comment">/** 这里配置视图解析器 */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">configureVeiwResolvers</span><span class="params">(ViewResolverRegistry registry)</span></span>;</span><br><span class="line"><span class="comment">/** 配置内容裁决的一些选项 */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">configureContentNegotiation</span><span class="params">(ContentNegotiationConfigurer configurer)</span></span>;</span><br><span class="line"><span class="comment">/** 视图跳转控制器 */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">addViewVontrollers</span><span class="params">(ViewControllerRegistry registry)</span></span>;</span><br><span class="line"><span class="comment">/** 静态资源处理 */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">addResourceHandlers</span><span class="params">(ResourceHandlerRegistry registry)</span></span>;</span><br><span class="line"><span class="comment">/** 默认静态资源处理器 */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">configureDefaultServletHandling</span><span class="params">(DefaultServletHandlerConfigurer configurer)</span></span>;</span><br></pre></td></tr></table></figure>
+<p>#添加拦截器<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addInterceptors</span><span class="params">(InterceptorRegistry registry)</span> </span>&#123;</span><br><span class="line">	registry.addInterceptor(<span class="keyword">new</span> ReqInterceptor()).addPathPatterns(<span class="string">"/**"</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h4 id="实现自定义拦截器"><a href="#实现自定义拦截器" class="headerlink" title="实现自定义拦截器"></a>实现自定义拦截器</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ReqInterceptor</span> <span class="keyword">extends</span> <span class="title">HandlerInterceptorAdapter</span> </span>&#123;</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">preHandle</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    	System.out.println(<span class="string">"拦截器--preHandle"</span>)；</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.preHandle(request, response, handler);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">postHandle</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    	System.out.println(<span class="string">"拦截器--postHandle"</span>);</span><br><span class="line">        <span class="keyword">super</span>.postHandle(request, response, handler, modelAndView);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">afterCompletion</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex)</span> <span class="keyword">throws</span> Excepion </span>&#123;</span><br><span class="line">    	System.out.println(<span class="string">"拦截器--afterCompletion"</span>);</span><br><span class="line">        <span class="keyword">super</span>.afterCompletion(request, response, handler, ex);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">afterConcurrentHandlingStarted</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler)</span> </span>&#123;</span><br><span class="line">    	System.out.println(<span class="string">"拦截器--afterConcurrentHandlingStarted"</span>);</span><br><span class="line">        <span class="keyword">super</span>.afterConcurrentHandlingStarted(request, response, handler);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/07/14/spring拦截器HandlerInterceptor/" data-id="cjyms8jte000mdwud5da3cac7" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-elasticsearch全文搜索探究（多词查询）" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2019/07/13/elasticsearch全文搜索探究（多词查询）/" class="article-date">
+  <time datetime="2019-07-13T08:16:22.000Z" itemprop="datePublished">2019-07-13</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/lfhboke.github.io/2019/07/13/elasticsearch全文搜索探究（多词查询）/">elasticsearch全文搜索探究（多词查询）</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h3 id="多词查询"><a href="#多词查询" class="headerlink" title="多词查询"></a>多词查询</h3><p>如果我们一次只能搜索一个词，那么全文搜索就会不太灵活，幸运的是match查询让多词变得简单：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">GET /my_index/my_type/_search</span><br><span class="line">&#123;</span><br><span class="line">	&quot;query&quot;:&#123;</span><br><span class="line">    	&quot;match&quot;:&#123;</span><br><span class="line">        	&quot;title&quot;:&quot;BROWN DOG!&quot;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>上面这个查询返回所有四个文档：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">	&quot;hits&quot;:[</span><br><span class="line">    	&#123;</span><br><span class="line">        	&quot;_id&quot;: &quot;4&quot;,</span><br><span class="line">            &quot;_score&quot;: 0.73185337,</span><br><span class="line">            &quot;_source&quot;&#123;&#125;</span><br><span class="line">        &#125;</span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>因为match查询必须查找两个词，它在内部实际上先执行两次term查询，然后将两次查询的结果合并作为最终结果输出。为了做到这点，它将两个term查询包入一个bool查询中。</p>
+<h4 id="提高精度"><a href="#提高精度" class="headerlink" title="提高精度"></a>提高精度</h4><p>用任意查询词项匹配文档可能会导致结果中出现不相关的长尾。这是种散弹式搜索。可能我们只想搜索包含所有词项的文档，也就是说，不去匹配brown OR dog，而通过匹配brown AND dog找到所有文档。match查询还可以接受operator操作符作为输入参数，默认情况下该操作是or。可以修改成and让所有指定词项都必须匹配：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">GET /my_index/my_type/_search</span><br><span class="line">&#123;</span><br><span class="line">	<span class="string">"query"</span>:&#123;</span><br><span class="line">    	<span class="string">"match"</span>:&#123;</span><br><span class="line">        	<span class="string">"title"</span>:&#123;</span><br><span class="line">            	<span class="string">"query"</span>:<span class="string">"BROWN DOG!"</span>,</span><br><span class="line">                <span class="string">"operator"</span>:<span class="string">"and"</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h4 id="控制精度"><a href="#控制精度" class="headerlink" title="控制精度"></a>控制精度</h4><p>在所有与任意间二选一有点过于非黑即白。如果用户给定5个查询词项，想查找只包含其中4个的文档，该如何处理？</p>
+<p>match查询支持minimum_should_match最小匹配参数，这让我们可以指定必须匹配的词项数用来表示一个文档是否相关。我们可以将其设置为某个具体数字，更常用的做法是将其设置为一个百分数。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">GET /my_index/my_type/_search</span><br><span class="line">&#123;</span><br><span class="line">	<span class="string">"query"</span>:&#123;</span><br><span class="line">    	<span class="string">"match"</span>:&#123;</span><br><span class="line">        	<span class="string">"title"</span>:&#123;</span><br><span class="line">            	<span class="string">"query"</span>:<span class="string">"quick brown dog"</span>,</span><br><span class="line">                <span class="string">"minimum_should_match"</span>:<span class="string">"75%"</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>当给定百分比的时候。minimum_should_match会做合适的事情：在之前三词项的示例中，75%会自动被截断成66.6%。即三个里面两个词。无论这个值设置成什么，至少包含一个词项的文档才会被认为是匹配的。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/07/13/elasticsearch全文搜索探究（多词查询）/" data-id="cjyms8jsw000idwude86bebot" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-elasticsearch全文搜索探究（匹配查询）" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2019/07/13/elasticsearch全文搜索探究（匹配查询）/" class="article-date">
+  <time datetime="2019-07-13T07:14:47.000Z" itemprop="datePublished">2019-07-13</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/lfhboke.github.io/2019/07/13/elasticsearch全文搜索探究（匹配查询）/">elasticsearch全文搜索探究（匹配查询）</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h3 id="匹配查询"><a href="#匹配查询" class="headerlink" title="匹配查询"></a>匹配查询</h3><p>匹配查询match是个核心查询。无论需要查询什么字段，match查询都应该会是首选的查询方式。它是一个高级全文查询，这表示它既能处理全文字段，又能处理精确字段。</p>
+<p>这就是说，match查询主要的应用场景就是进行全文搜索。</p>
+<h4 id="索引一些数据"><a href="#索引一些数据" class="headerlink" title="索引一些数据"></a>索引一些数据</h4><p>首先使用bulk API创建一些新的文档和索引：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">DELETE /my_index</span><br><span class="line">PUT /my_index</span><br><span class="line">&#123;&quot;settings&quot;:&#123;&quot;number_of_shards&quot;:1&#125;&#125;</span><br><span class="line"></span><br><span class="line">POST /my_index/my_type/_bulk</span><br><span class="line">&#123;&quot;index&quot;:&#123;&quot;_id&quot;:1&#125;&#125;</span><br><span class="line">&#123;&quot;title&quot;:&quot;The quick brown fox&quot;&#125;</span><br><span class="line">&#123;&quot;index&quot;:&#123;&quot;_id&quot;:2&#125;&#125;</span><br><span class="line">&#123;&quot;title&quot;:&quot;The quick brown fox&quot;&#125;</span><br><span class="line">&#123;&quot;index&quot;:&#123;&quot;_id&quot;:3&#125;&#125;</span><br><span class="line">&#123;&quot;title&quot;:&quot;The quick brown fox&quot;&#125;</span><br></pre></td></tr></table></figure></p>
+<h4 id="单个词查询"><a href="#单个词查询" class="headerlink" title="单个词查询"></a>单个词查询</h4><p>我们用第一个示例来解释使用match查询搜索全文字段中的单个词：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">GET /my_index/my_type/_search</span><br><span class="line">&#123;</span><br><span class="line">	&quot;query&quot;:&#123;</span><br><span class="line">    	&quot;match&quot;:&#123;&quot;title&quot;:&quot;QUICK!&quot;&#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>elasticsearch执行上面这个match查询的步骤是：</p>
+<ol>
+<li>检查字段类型。</li>
+</ol>
+<p>标题title字段是一个string类型（analyzed）已分析的全文字段，这意味着查询字符串本身也应该被分析。</p>
+<ol start="2">
+<li>分析查询字符串。</li>
+</ol>
+<p>将查询的字符串QUICK！传入标准分析器，输出的结果是单个项quick。因为只有一个单词项，所以match查询执行的是单个底层term查询。</p>
+<ol start="3">
+<li>查找匹配文档。</li>
+</ol>
+<p>用term查询在倒排索引中查找quick然后获取一组包含该项的文档。</p>
+<ol start="4">
+<li>为每个文档评分。</li>
+</ol>
+<p>用term查询计算每个文档相关度评分_score，这是种将词频和反向文档频率，以及字段的长度相结合的计算方式。</p>
+<p>这个过程给我们以下结果：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">&quot;hits&quot;:[</span><br><span class="line">&#123;</span><br><span class="line">	&quot;_id&quot;:&quot;1&quot;,</span><br><span class="line">    &quot;_score&quot;:0.5,</span><br><span class="line">    &quot;_source&quot;:&#123;</span><br><span class="line">    	&quot;title&quot;:&quot;The quick brown fox&quot;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;,</span><br><span class="line">&#123;</span><br><span class="line">	&quot;_id&quot;:&quot;2&quot;,</span><br><span class="line">    &quot;_score&quot;:0.44194174,</span><br><span class="line">    &quot;_source&quot;:&#123;</span><br><span class="line">    	&quot;title&quot;:&quot;The quick brown fox&quot;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">]</span><br></pre></td></tr></table></figure></p>
+<ol>
+<li>文档1最相关，因为它的title字段更短，即quick占据内容的一大部分。</li>
+<li>文档3比文档2更具有相关性，因为在文档3中quick出现两次。</li>
+</ol>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/07/13/elasticsearch全文搜索探究（匹配查询）/" data-id="cjyms8jsg000fdwud2i4osqkl" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
     <article id="post-Collections解读" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/lfhboke.github.io/2019/06/20/Collections解读/" class="article-date">
@@ -97,7 +483,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/06/20/Collections解读/" data-id="cj49du1nj0001l4udp409tvyk" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/06/20/Collections解读/" data-id="cjyms8jqe0000dwud4ow8v7sp" class="article-share-link">Share</a>
       
       
     </footer>
@@ -344,7 +730,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/06/18/Java并发之AQS详解/" data-id="cj49du1qo000nl4udauxi5num" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/06/18/Java并发之AQS详解/" data-id="cjyms8jwb0013dwud31omhdcp" class="article-share-link">Share</a>
       
       
     </footer>
@@ -410,432 +796,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/06/17/Java并发工具类之LongAdder/" data-id="cj49du1ns0004l4udy413f6v6" class="article-share-link">Share</a>
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-    <article id="post-redis之LRU算法" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/lfhboke.github.io/2019/05/22/redis之LRU算法/" class="article-date">
-  <time datetime="2019-05-22T05:07:32.000Z" itemprop="datePublished">2019-05-22</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/lfhboke.github.io/2019/05/22/redis之LRU算法/">redis之LRU算法</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>以前其实有看过redis的超出物理内存限制时的淘汰策略，但没有深入的分析过，这次做个笔记。</p>
-<p>当redis内存超出物理内存限制时，内存的数据会开始和磁盘产生频繁的交换。</p>
-<p>为了限制最大使用内存，redis提供了配置参数maxmemory来限制内存超出期望大小。</p>
-<p>当内存超出maxmemory时，redis提供了几种可选策略（maxmemory-policy）：</p>
-<ol>
-<li>noiviction：不会继续服务写请求（del请求可以继续服务），读请求可以继续进行。这样可以保证不会丢失数据，但是会让线上的业务不能持续进行。这时默认淘汰策略。</li>
-</ol>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/05/22/redis之LRU算法/" data-id="cj49du1oj000dl4udq2chts2b" class="article-share-link">Share</a>
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-    <article id="post-java8新特性" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/lfhboke.github.io/2019/05/22/java8新特性/" class="article-date">
-  <time datetime="2019-05-21T23:31:21.000Z" itemprop="datePublished">2019-05-22</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/lfhboke.github.io/2019/05/22/java8新特性/">java8新特性</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <ol>
-<li>Lambda表达式。</li>
-<li>接口的默认方法与静态方法：在接口中定义默认方法，使用default关键字，并提供默认的实现。</li>
-<li><p>方法引用：</p>
-<p> 通常与Lambda表达式联合使用，可以直接引用已有Java类或对象的方法。一般有四种不同的方法引用：</p>
-<ol>
-<li>构造器引用。语法式Class::new，或者更一般的Class<t>::new，要求构造器方法是没有参数；</t></li>
-<li>静态方法引用。语法是Class::static_method，要求接受一个Class类型的参数；</li>
-<li>特定类的任意对象方法引用。它的语法是Class::method。要求方法没有参数的；</li>
-<li>特定对象的方法引用，它的语法是instance::method。要求方法接受一个参数，与3不同的地方在于，3是在列表元素上分别调用方法，而4是在某个对象上调用方法，将列表元素作为参数传入；</li>
-</ol>
-</li>
-<li><p>重复注解：在Java5中使用注解有一个限制，即相同的注解在同一位置只能声明一次。Java8引入重复注解，这样相同的注解在同一地方也可以声明多次。重复注解机制本身需要用@Repeatable注解。Java8在编译器层做了优化，相同注解会以集合的方式保存，因此底层的原理并没有变化。</p>
-</li>
-<li>扩展注解的支持：Java8扩展了注解的上下文，几乎可以为任何东西添加注解，包括局部变量、泛型类、父类与接口的实现，连方法的异常也能添加注解。</li>
-<li>Optional：Java8引入Optional类来防止空指针异常，Optional类实际上是个容器：它可以保存类型T的值，或者保存null。使用Optional类我们就不用显式进行空指针检查了。</li>
-<li>Stream：Stream API是把真正的函数式编程风格引入到Java中。起始简单来说可以把Stream理解为MapReduce，其实是一连串支持连续、并行聚集操作的元素。从语法上看，也很像Linux的管道、或者链式编程，代码写起来简洁明了。</li>
-<li>Date/TimeAPI：Java8新的Date-TimeAPI受Joda-Time的影响，提供了新的java.time包，可以用来替代java.util.Date和java.util.Calendar。一般会用到Clock、LocaleDate、LocalTime、LocaleDateTime、ZonedDateTime、Duration这些类，对于时间日期的改进还是非常不错的。</li>
-<li>JavaScript引擎Nashorn：Nashorn允许在JVM上开发运行JavaScript应用，允许java与JavaScript相互调用。</li>
-<li>Base64：在Java8中，Base64编码成为了Java类库的标准。</li>
-</ol>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/05/22/java8新特性/" data-id="cj49du1o50009l4udpv8578de" class="article-share-link">Share</a>
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-    <article id="post-流计算框架之storm（基础篇）" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/lfhboke.github.io/2019/03/01/流计算框架之storm（基础篇）/" class="article-date">
-  <time datetime="2019-03-01T01:59:10.000Z" itemprop="datePublished">2019-03-01</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/lfhboke.github.io/2019/03/01/流计算框架之storm（基础篇）/">流计算框架之storm（基础篇）</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>Storm是一个分布式的、高容错的实时计算系统。</p>
-<p>Storm对于实时计算的意义相当于Hadoop对于批处理的意义。Hadoop提供了Map和Reduce。同样，Storm也对数据的实时计算提供了Spout和Bolt。</p>
-<p>Storm使用场景：</p>
-<ol>
-<li>流数据处理：Storm可以用来处理源源不断的消息，并将处理之后的结果保存到持久化介质中。</li>
-<li>分布式RPC：由于Storm的处理组建都是分布式的，而且处理延迟都极低，所以Storm可以做为一个通用的分布式RPC框架来使用。<h3 id="一个Storm集群的基本组件"><a href="#一个Storm集群的基本组件" class="headerlink" title="一个Storm集群的基本组件"></a>一个Storm集群的基本组件</h3></li>
-</ol>
-<p>storm上面运行的是Topology。一个Topology永远运行（除非你显式的杀掉）。</p>
-<p>在Storm的集群里面有两种节点：控制节点（master node）和工作节点（worker node）。控制节点上面运行一个后台程序：Nimbus，它负责在集群里面分布代码，分配工作给机器，并且监控状态。每一个工作节点上面运行要给叫做Supervisor的节点（类似TaskTracker）。Supervisor会监听分配给它那台机器的工作，根据需要启动/关闭工作进程。每一个工作进程执行一个Topology（类似Job）的一个子集；一个运行的Topology由运行在很多机器上的很多工作进程Worker（类似Child）组成。<br><img src="/lfhboke.github.io/css/images/storm1.png" alt="storm toplogy结构"></p>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/03/01/流计算框架之storm（基础篇）/" data-id="cj49du1on000fl4udjdk4bt6g" class="article-share-link">Share</a>
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-    <article id="post-消息中间件之kafka-原理篇" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/lfhboke.github.io/2018/10/13/消息中间件之kafka-原理篇/" class="article-date">
-  <time datetime="2018-10-13T13:53:53.000Z" itemprop="datePublished">2018-10-13</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/lfhboke.github.io/2018/10/13/消息中间件之kafka-原理篇/">消息中间件之kafka(原理篇)</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h3 id="kafka架构"><a href="#kafka架构" class="headerlink" title="kafka架构"></a>kafka架构</h3><p><img src="/lfhboke.github.io/css/images/kafka1.png" alt="kafka拓扑结构"><br>图中概念定义如下：</p>
-<ol>
-<li>producer：消息生产者。</li>
-<li>broker：集群包含的服务器。</li>
-<li>topic：每条发布到集群的消息类别，概念篇里没说明这边补一下，kafka是面向topic的。</li>
-<li>partition：每个topic包含一个或多个partition。kafka的分配单元。</li>
-<li>consumer：从kafka集群中消费消息的终端或服务。</li>
-<li>Consumer group：high-level consumer API中，每个consumer都属于一个consumer group，每条消息只能被consumer group中的一个Consumer消费，但可以被多个consumer group消费。</li>
-<li>replica：partition的副本，保障partition的高可用。</li>
-<li>leader： replica中的一个角色，producer和consumer只跟leader交互。</li>
-<li>follower：replica中的一个角色，从leader中复制数据。</li>
-<li>controller：kafka集群中的其中一个服务器，用来进行leader election以及各种failover。</li>
-<li>zookeeper：kafka通过zookeeper来存储集群的meta信息。<h4 id="zookeeper节点中kafka存储结构"><a href="#zookeeper节点中kafka存储结构" class="headerlink" title="zookeeper节点中kafka存储结构"></a>zookeeper节点中kafka存储结构</h4></li>
-</ol>
-<p><img src="/lfhboke.github.io/css/images/zookeeper1.jpg" alt="kafka在zookeeper中存储结构"></p>
-<h3 id="producer发布消息"><a href="#producer发布消息" class="headerlink" title="producer发布消息"></a>producer发布消息</h3><h4 id="写入方式"><a href="#写入方式" class="headerlink" title="写入方式"></a>写入方式</h4><p>producer采用push模式将消息发布到broker，每条消息都被append到patition中，属于顺序写磁盘（顺序写磁盘效率比随机写内存要高，保障kafka吞吐率）。</p>
-<h4 id="消息路由"><a href="#消息路由" class="headerlink" title="消息路由"></a>消息路由</h4><p>producer发送消息到broker时，会根据分区算法选择将其存储到哪一个partition。其路由机制为：<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">指定了partition，则直接使用；</span><br><span class="line">未指定partition但指定key，通过对key的value进行<span class="built_in">hash</span>选出一个partition；</span><br><span class="line">partition和key都未指定，使用轮询选出一个partition。</span><br></pre></td></tr></table></figure></p>
-<p>然后看一段java客户端分区源码：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//创建消息实例</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">ProducerRecord</span><span class="params">(String topic, Integer partition, Long timestamp, K key, V value)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">if</span>(topic == <span class="keyword">null</span>)&#123;</span><br><span class="line">    	<span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"Topic cannot be null"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span>(timestamp != <span class="keyword">null</span> &amp;&amp; timestamp &lt; <span class="number">0</span>)&#123;</span><br><span class="line">    	<span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"Invalid timestamp"</span> + timestamp);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">this</span>.topic = topic;</span><br><span class="line">    <span class="keyword">this</span>.partition = partition;</span><br><span class="line">    <span class="keyword">this</span>.key = key;</span><br><span class="line">    <span class="keyword">this</span>.value = value;</span><br><span class="line">    <span class="keyword">this</span>.timestamp = timestamp;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//计算partition，如果指定了partition则直接使用，否则使用key计算</span></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">int</span> <span class="title">partition</span><span class="params">(ProducerRecord&lt;K, V&gt; record, <span class="keyword">byte</span>[] serializedKey, <span class="keyword">byte</span>[] serializedValue, Cluster cluster)</span> </span>&#123;</span><br><span class="line">	Integer partition = record.partition();</span><br><span class="line">    <span class="keyword">if</span>(<span class="keyword">null</span> != partition) &#123;</span><br><span class="line">    	List&lt;Partitioninfo&gt; partitions = cluster.partitionsforTopic(record.topic());</span><br><span class="line">        <span class="keyword">int</span> lastPartition = partitions.size() - <span class="number">1</span>;</span><br><span class="line">        <span class="keyword">if</span>(partition &lt; <span class="number">0</span> || partition &gt; lastPartition) &#123;</span><br><span class="line">        	<span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> partition;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>.partitioner.partition(record.topic(), record.key(), serializedKey, record.value(), serializedValue, cluster);</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//使用key选取partition</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">partition</span><span class="params">(String topic, Object key, <span class="keyword">byte</span>[] keyBytes, Object value, <span class="keyword">byte</span>[] valueBytes, Cluster cluster)</span> </span>&#123;</span><br><span class="line">	List&lt;PartitionInfo&gt; partitions = cluster.partitionsForTopic(topic);</span><br><span class="line">    <span class="keyword">int</span> numPartitions = partitions.size();</span><br><span class="line">    <span class="keyword">if</span>(keyBytes == <span class="keyword">null</span>)&#123;</span><br><span class="line">    	<span class="keyword">int</span> nextValue = counter.getAndIncrement();</span><br><span class="line">        List&lt;PartitionInfo&gt; availablePartitions = cluster.availablePartitionsForTopic(topic);</span><br><span class="line">        <span class="keyword">if</span>(availablePartitions.size() &gt; <span class="number">0</span>) &#123;</span><br><span class="line">        	<span class="keyword">int</span> part = DefaultPartitioner.toPositive(nextValue) % availablePartitions.size();</span><br><span class="line">            <span class="keyword">return</span> availablePartitions.get(part).partition();</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        	<span class="keyword">return</span> DefaultPartitioner.toPositive(nextValue) % numPartitions;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    	<span class="comment">//对keyBytes进行hash选出partition</span></span><br><span class="line">        <span class="keyword">return</span> DefaultPartitioner.toPositive(Utils.murmur2(keyBytes)) % numPartittions;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<h4 id="写入流程"><a href="#写入流程" class="headerlink" title="写入流程"></a>写入流程</h4><p>producer写入消息序列图如下：<br><img src="/lfhboke.github.io/css/images/kafka2.jpg" alt="kafka producer写入消息序列图"></p>
-<ol>
-<li>producer先从zookeeper的”/brokers/…/state”节点找到该partition的leader</li>
-<li>producer将消息发送给该leader</li>
-<li>leader将消息写入本地log</li>
-<li>followers从leader pull消息，写入本地log后leader发送ACK</li>
-<li>leader收到所有ISR中的replica的ACK后，增加HW（high watermark，最后commit的offset）并向producer发送ACK<h4 id="producer-delivery-guarantee"><a href="#producer-delivery-guarantee" class="headerlink" title="producer delivery guarantee"></a>producer delivery guarantee</h4></li>
-</ol>
-<p>一般情况下存在三种情况：</p>
-<ol>
-<li>At most once消息可能会丢，但绝不会重复传输</li>
-<li>At least one消息绝不会，但可能会重复传输</li>
-<li>Exactly once每条消息肯定会被传输一次且仅传输一次<h3 id="broker保存消息"><a href="#broker保存消息" class="headerlink" title="broker保存消息"></a>broker保存消息</h3><h4 id="存储方式"><a href="#存储方式" class="headerlink" title="存储方式"></a>存储方式</h4></li>
-</ol>
-<p>物理上把topic分成一个或多个partition（对应server.properties中的num.partitions=3配置），每个partition物理上对应一个文件夹（该文件夹存储该partition的所有消息和索引文件）。</p>
-<h4 id="存储策略"><a href="#存储策略" class="headerlink" title="存储策略"></a>存储策略</h4><p>无论消息是否被消费，kafka都会保留所有消息。有两种策略可以删除旧数据：</p>
-<ol>
-<li>基于时间：log.retention.hours = 168</li>
-<li>基于大小：log.retention.bytes = 1073741824</li>
-</ol>
-<p>需要注意的是，因为Kafka读取特定消息的时间复杂度为O(1)，即与文件大小无关，所以这里删除过期文件与提高kafka性能无关。</p>
-<h4 id="topic创建与删除"><a href="#topic创建与删除" class="headerlink" title="topic创建与删除"></a>topic创建与删除</h4><h5 id="创建topic"><a href="#创建topic" class="headerlink" title="创建topic"></a>创建topic</h5><p>创建topic的序列图如下所示：<br><img src="/lfhboke.github.io/css/images/kafka3.jpg" alt="kafka producer写入消息序列图"></p>
-<ol>
-<li>controller在Zookeeper的/brokers/topics节点上注册watcher，当topic被创建，则controller会通过watch得到该topic的partition/replica分配。</li>
-<li><p>controller从/brokers/ids读取当前所有可用的broker列表，对于set_p中的每个partition：</p>
-<p> 从分配给该partition的所有replica中任选一个可用的broker作为新的leader，并将AR设置为新的ISR</p>
-<p> 将新的leader和ISR写入/brokers/topics/[topic]/partitions/[partition]/state</p>
-</li>
-<li>controller通过RPC向相关的broker发送LeaderAndISRRequest。<h5 id="删除topic"><a href="#删除topic" class="headerlink" title="删除topic"></a>删除topic</h5></li>
-<li>controller在zookeeper的/brokers/topic节点上注册watcher，当topic被删除，则controller会通过watch得到该topic的partition/replica分配。</li>
-<li>若delete.topic.enable=false，结束；否则controller注册在/admin/delete_topics上的watch被fire，controller通过回调向对应的broker发送StopreplicaRequest。</li>
-</ol>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2018/10/13/消息中间件之kafka-原理篇/" data-id="cj49du1ot000hl4udq65jnp6e" class="article-share-link">Share</a>
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-    <article id="post-消息中间件之kafka-基础篇" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/lfhboke.github.io/2018/10/13/消息中间件之kafka-基础篇/" class="article-date">
-  <time datetime="2018-10-13T13:21:22.000Z" itemprop="datePublished">2018-10-13</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/lfhboke.github.io/2018/10/13/消息中间件之kafka-基础篇/">消息中间件之kafka(基础篇)</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>之前已经分析了activeMq，现在开始学习kafka。</p>
-<p>kafka也是消息中间件，但不同的是，它类似于JMS特性，但并不是JMS规范的实现。</p>
-<p>kafka对消息保存时根据Topic进行归类，发送消息者成为Producer，消息接受者成为Consumer，此外kafka集群有多个kafka实例组成，每个实例（server）成为broker。无论是kafka集群，还是producer和consumer都依赖于zookeeper保证系统可用性。kafka是天生的分布式消息，多用于实时性较高的消息消费。</p>
-<h3 id="kafka-java-api"><a href="#kafka-java-api" class="headerlink" title="kafka java api"></a>kafka java api</h3><p>多说无益，直接上代码实际：</p>
-<h4 id="producer源码"><a href="#producer源码" class="headerlink" title="producer源码"></a>producer源码</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ProducerDemo</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</span><br><span class="line">        Properties properties = <span class="keyword">new</span> Properties();</span><br><span class="line">        properties.put(<span class="string">"bootstrap.servers"</span>, <span class="string">"192.168.1.110:9092"</span>);</span><br><span class="line">        properties.put(<span class="string">"acks"</span>, <span class="string">"all"</span>);</span><br><span class="line">        properties.put(<span class="string">"retries"</span>, <span class="number">0</span>);</span><br><span class="line">        properties.put(<span class="string">"batch.size"</span>, <span class="number">16384</span>);</span><br><span class="line">        properties.put(<span class="string">"linger.ms"</span>, <span class="number">1</span>);</span><br><span class="line">        properties.put(<span class="string">"buffer.memory"</span>, <span class="number">33554432</span>);</span><br><span class="line">        properties.put(<span class="string">"key.serializer"</span>, <span class="string">"org.apache.kafka.common.serialization.StringSerializer"</span>);</span><br><span class="line">        properties.put(<span class="string">"value.serializer"</span>, <span class="string">"org.apache.kafka.common.serialization.StringSerializer"</span>);</span><br><span class="line">        Producer&lt;String, String&gt; producer = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            producer = <span class="keyword">new</span> KafkaProducer&lt;String, String&gt;(properties);</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">100</span>; i++) &#123;</span><br><span class="line">                String msg = <span class="string">"Message "</span> + i;</span><br><span class="line">                producer.send(<span class="keyword">new</span> ProducerRecord&lt;String, String&gt;(<span class="string">"HelloWorld"</span>, msg));</span><br><span class="line">                System.out.println(<span class="string">"Sent:"</span> + msg);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line"></span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            producer.close();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h4 id="Consumer源码"><a href="#Consumer源码" class="headerlink" title="Consumer源码"></a>Consumer源码</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ConsumerDemo</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</span><br><span class="line">        Properties properties = <span class="keyword">new</span> Properties();</span><br><span class="line">        properties.put(<span class="string">"bootstrap.servers"</span>, <span class="string">"192.168.1.110:9092"</span>);</span><br><span class="line">        properties.put(<span class="string">"group.id"</span>, <span class="string">"group-1"</span>);</span><br><span class="line">        properties.put(<span class="string">"enable.auto.commit"</span>, <span class="string">"true"</span>);</span><br><span class="line">        properties.put(<span class="string">"auto.commit.interval.ms"</span>, <span class="string">"1000"</span>);</span><br><span class="line">        properties.put(<span class="string">"auto.offset.reset"</span>, <span class="string">"earliest"</span>);</span><br><span class="line">        properties.put(<span class="string">"session.timeout.ms"</span>, <span class="string">"30000"</span>);</span><br><span class="line">        properties.put(<span class="string">"key.deserializer"</span>, <span class="string">"org.apache.kafka.common.serialization.StringDeserializer"</span>);</span><br><span class="line">        properties.put(<span class="string">"value.deserializer"</span>, <span class="string">"org.apache.kafka.common.serialization.StringDeserializer"</span>);</span><br><span class="line"></span><br><span class="line">        KafkaConsumer&lt;String, String&gt; kafkaConsumer = <span class="keyword">new</span> KafkaConsumer&lt;&gt;(properties);</span><br><span class="line">        kafkaConsumer.subscribe(Arrays.asList(<span class="string">"HelloWorld"</span>));</span><br><span class="line">        <span class="keyword">while</span> (<span class="keyword">true</span>) &#123;</span><br><span class="line">            ConsumerRecords&lt;String, String&gt; records = kafkaConsumer.poll(<span class="number">100</span>);</span><br><span class="line">            <span class="keyword">for</span> (ConsumerRecord&lt;String, String&gt; record : records) &#123;</span><br><span class="line">                System.out.printf(<span class="string">"offset = %d, value = %s"</span>, record.offset(), record.value());</span><br><span class="line">                System.out.println();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2018/10/13/消息中间件之kafka-基础篇/" data-id="cj49du1ox000jl4uduecctxw1" class="article-share-link">Share</a>
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-    <article id="post-Mybatis之SqlSession四大对象" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/lfhboke.github.io/2017/09/14/Mybatis之SqlSession四大对象/" class="article-date">
-  <time datetime="2017-09-14T11:04:58.000Z" itemprop="datePublished">2017-09-14</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/lfhboke.github.io/2017/09/14/Mybatis之SqlSession四大对象/">Mybatis之SqlSession四大对象</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>之所以分析SqlSession四大对象，其实是为了后续讲解Mybatis插件作为铺垫。</p>
-<p>Mybatis插件其实就是拦截SqlSession的四大对象，进行其中属性的修改。</p>
-<p>SqlSession给出了删除、更新、插入、选择等方法。</p>
-<p>其中四大对象包括：</p>
-<ol>
-<li><font color="red">Executor</font>：执行器，由它来调度StatementHandler、ParameterHandler、ResultHandler等来执行对应的SQL。</li>
-<li><font color="red">StatementHandler</font>：使用数据库的Statement(PreparedStatement)执行操作，它是四大对象的核心，起到承上启下的作用。</li>
-<li><font color="red">ParameterHandler</font>：SQL对参数的处理。</li>
-<li><font color="red">ResultHandler</font>：进行最后数据集（ResultSet）的封装返回处理。<h3 id="执行器（Executor）"><a href="#执行器（Executor）" class="headerlink" title="执行器（Executor）"></a>执行器（Executor）</h3></li>
-</ol>
-<p>执行器（Executor）是一个真正执行Java和数据库交互的东西。在Mybatis中存在三种执行器：</p>
-<ol>
-<li>SIMPLE，简易执行器，默认执行器。</li>
-<li>REUSE，执行器重用预处理器。</li>
-<li>BATCH，执行器重用语句和批量更新，它是针对批量专用的执行器。</li>
-</ol>
-<p>创建Executor：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> Executor <span class="title">newExecutor</span><span class="params">(Transaction transaction, ExecutorType executorType)</span> </span>&#123;</span><br><span class="line">	executorType = executorType == <span class="keyword">null</span>? defaultExecutorType: executorType;</span><br><span class="line">    executorType = executorType == <span class="keyword">null</span>? ExecutorType.SIMPLE: executorType;</span><br><span class="line">    Executor executor;</span><br><span class="line">    <span class="keyword">if</span>(ExecutorType.BATCH == executorType) &#123;</span><br><span class="line">    	executor = <span class="keyword">new</span> BatchExecutor(<span class="keyword">this</span>, transaction);</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span>(ExecutorType.REUSE == executorType) &#123;</span><br><span class="line">    	executor = <span class="keyword">new</span> ReuseExecutor(<span class="keyword">this</span>, transaction);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    	executor = <span class="keyword">new</span> SimpleExecutor(<span class="keyword">this</span>, transaction);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span>(cacheEnabled) &#123;</span><br><span class="line">    	executor = <span class="keyword">new</span> CacheingExecutor(executor);</span><br><span class="line">    &#125;</span><br><span class="line">    executor = (Executor) interceptorChain.pluginAll(executor);</span><br><span class="line">    <span class="keyword">return</span> executor;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>SimpleExecutor源码分析;<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SimpleExecutor</span> <span class="keyword">extends</span> <span class="title">BaseExecutor</span></span>&#123;</span><br><span class="line"></span><br><span class="line">	...</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span>&lt;E&gt; List&lt;E&gt; <span class="title">doQuery</span><span class="params">(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql)</span> <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">    	Statement stmt = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span>&#123;</span><br><span class="line">        	Configuration configuration = ms.getConfiguration();</span><br><span class="line">            StatementHandler handler = configuration.newStatementHandler(wrapper, ms, parameter, rowBounds, resultHandler, boundSql);</span><br><span class="line">            stmt = prepareStatement(handler, ms.getStatementLog());</span><br><span class="line">            stmt = prepareStatement(handler, ms.getStatementLog());</span><br><span class="line">            <span class="keyword">return</span> handler.&lt;E&gt;query(stmt, resultHandler);</span><br><span class="line">        &#125;<span class="keyword">finally</span>&#123;</span><br><span class="line">        	closeStatement(stmt);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> Statement <span class="title">prepareStatement</span><span class="params">(StatementHandler handler, Log statementLog)</span> <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">    	Statement stmt;</span><br><span class="line">        Connection connection = getConnection(statementLog);</span><br><span class="line">        stmt = handler.prepare(connection);</span><br><span class="line">        handler.parameterize(stmt);</span><br><span class="line">        <span class="keyword">return</span> stmt;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    ...</span><br><span class="line">   </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<h3 id="数据库会话器（StatementHandler）"><a href="#数据库会话器（StatementHandler）" class="headerlink" title="数据库会话器（StatementHandler）"></a>数据库会话器（StatementHandler）</h3><p>生成会话器的源码：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> StatementHandler <span class="title">newStatementHandler</span><span class="params">(Executor executor, MappedStatement mappedStatement, Object parameterObject, RowBounds rowBounds, ResultHandler resultHander, BoundSql boundSql)</span> </span>&#123;</span><br><span class="line">	StatementHandler statementHandler = <span class="keyword">new</span> RoutingStatementHandler(executor, mappedStatement, parameterObject, rowBounds, resultHandler, boundSql);</span><br><span class="line">    statementHandler = (StatementHandler) intercptorChain.pluginAll(statementHandler);</span><br><span class="line">    <span class="keyword">return</span> statementHandler;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>创建的真实对象是一个RoutingStatementHandler对象，它实现了接口StatementHandler。</p>
-<p>看下RoutingStatementHandler的源码：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">RoutingStatementHandler</span> <span class="keyword">implements</span> <span class="title">StatementHandler</span></span>&#123;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> StatementHandler delegate;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">RoutingStatementHandler</span><span class="params">(Executor executor, MappedStatement ms, Object parameter, RowBouds rowBounds, ResultHandler resultHandler, BoundSql boundSql)</span> </span>&#123;</span><br><span class="line">    	<span class="keyword">switch</span>(ms.getStatementType()) &#123;</span><br><span class="line">        	<span class="keyword">case</span> STATEMENT:</span><br><span class="line">            	delegate = <span class="keyword">new</span> SimpleStatementHandler(executor, ms, parameter, rowBounds, resultHandler,boundSql);</span><br><span class="line">               	<span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> PREPARED:</span><br><span class="line">            	delegate = <span class="keyword">new</span> PreparedStatementHandler(executor, ms, parameter, rowBounds, resultHandler, boundSql);</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> CALLABLE:</span><br><span class="line">            	delegate = <span class="keyword">new</span> CallableStatementHandler(executor, ms, parameter, rowBounds, resultHandler, boundSql);</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">default</span>:</span><br><span class="line">            	<span class="keyword">throw</span> <span class="keyword">new</span> ExecutorException(<span class="number">0</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>PreparedStatementHandler源码：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">BaseStatementHandler</span> <span class="keyword">implements</span> <span class="title">StatementHandler</span></span>&#123;</span><br><span class="line"></span><br><span class="line">	...</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Statement <span class="title">prepare</span><span class="params">(Connection connection)</span> <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">    	ErrorContext.instance().sql(boundSql.getSql());</span><br><span class="line">        Statement statement = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span>&#123;</span><br><span class="line">        	statement = instantiateStatement(connection);</span><br><span class="line">            setStatementTimeOut(statement);</span><br><span class="line">            setFetchSize(statement);</span><br><span class="line">            <span class="keyword">return</span> statement;</span><br><span class="line">        &#125;<span class="keyword">catch</span>()&#123;&#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>Executor调用parameterize()方法去设置参数：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">parameterize</span><span class="params">(Statement statement)</span> <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">	parameterHandler.setParameters((PreparedStatement) statement);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>StatementHandler的查询方法：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span>&lt;E&gt; List&lt;E&gt; <span class="title">query</span><span class="params">(Statement statement, ResultHandler resultHandler)</span> <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">	PreparedStatement ps = (PreparedStatement) statement;</span><br><span class="line">    ps.execute();</span><br><span class="line">    <span class="keyword">return</span> resultSetHandler.&lt;E&gt;handleResultSets(ps);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>由于在执行前参数和SQL都被prepare()方法预编译，参数在parameterize()方法上已经进行了设置。</p>
-<p>现在描述一下查询SQL的执行过程：</p>
-<p>Excutor会先调用StatementHandler的prepare()方法预编译SQL语句，同时设置一些基本运行的参数。然后用parameterize()方法启用ParameterHandler设置参数，完成预编译，跟着就是执行查询。</p>
-<h3 id="参数处理器"><a href="#参数处理器" class="headerlink" title="参数处理器"></a>参数处理器</h3><p>首先看下ParameterHandler定义：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">ParameterHandler</span> </span>&#123;</span><br><span class="line">	<span class="function">Object <span class="title">getParameterObject</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">setParameters</span><span class="params">(PreparedStatement ps)</span> <span class="keyword">throws</span> SQLException</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>其中，getParameterObject()方法的作用是返回参数对象，setParameters()方法的作用是设置预编译SQL语句的参数。<br>Mybatis为ParameterHandler提供了一个实现类DefaultParameterHandler：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> Clinton Begin</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> Eduardo Macarron</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DefaultParameterHandler</span> <span class="keyword">implements</span> <span class="title">ParameterHandler</span> </span>&#123;</span><br><span class="line">  <span class="comment">// TypeHandlerRegistry用map存储多种类型的TypeHandler</span></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">final</span> TypeHandlerRegistry typeHandlerRegistry;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">final</span> MappedStatement mappedStatement;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">final</span> Object parameterObject;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">final</span> BoundSql boundSql;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">final</span> Configuration configuration;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">DefaultParameterHandler</span><span class="params">(MappedStatement mappedStatement, Object parameterObject, BoundSql boundSql)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.mappedStatement = mappedStatement;</span><br><span class="line">    <span class="keyword">this</span>.configuration = mappedStatement.getConfiguration();</span><br><span class="line">    <span class="keyword">this</span>.typeHandlerRegistry = mappedStatement.getConfiguration().getTypeHandlerRegistry();</span><br><span class="line">    <span class="keyword">this</span>.parameterObject = parameterObject;</span><br><span class="line">    <span class="keyword">this</span>.boundSql = boundSql;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> Object <span class="title">getParameterObject</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> parameterObject;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setParameters</span><span class="params">(PreparedStatement ps)</span> </span>&#123;</span><br><span class="line">    ErrorContext.instance().activity(<span class="string">"setting parameters"</span>).object(mappedStatement.getParameterMap().getId());</span><br><span class="line">    List&lt;ParameterMapping&gt; parameterMappings = boundSql.getParameterMappings();</span><br><span class="line">    <span class="keyword">if</span> (parameterMappings != <span class="keyword">null</span>) &#123;</span><br><span class="line">      <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; parameterMappings.size(); i++) &#123;</span><br><span class="line">        ParameterMapping parameterMapping = parameterMappings.get(i);</span><br><span class="line">        <span class="keyword">if</span> (parameterMapping.getMode() != ParameterMode.OUT) &#123;</span><br><span class="line">          Object value;</span><br><span class="line">          String propertyName = parameterMapping.getProperty();</span><br><span class="line">          <span class="keyword">if</span> (boundSql.hasAdditionalParameter(propertyName)) &#123; <span class="comment">// issue #448 ask first for additional params</span></span><br><span class="line">            value = boundSql.getAdditionalParameter(propertyName);</span><br><span class="line">          &#125; <span class="keyword">else</span> <span class="keyword">if</span> (parameterObject == <span class="keyword">null</span>) &#123;</span><br><span class="line">            value = <span class="keyword">null</span>;</span><br><span class="line">          &#125; <span class="keyword">else</span> <span class="keyword">if</span> (typeHandlerRegistry.hasTypeHandler(parameterObject.getClass())) &#123;</span><br><span class="line">            value = parameterObject;</span><br><span class="line">          &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            MetaObject metaObject = configuration.newMetaObject(parameterObject);</span><br><span class="line">            value = metaObject.getValue(propertyName);</span><br><span class="line">          &#125;</span><br><span class="line">          <span class="comment">// 选择合适的TypeHandler实现类</span></span><br><span class="line">          TypeHandler typeHandler = parameterMapping.getTypeHandler();</span><br><span class="line">          JdbcType jdbcType = parameterMapping.getJdbcType();</span><br><span class="line">          <span class="keyword">if</span> (value == <span class="keyword">null</span> &amp;&amp; jdbcType == <span class="keyword">null</span>) &#123;</span><br><span class="line">            jdbcType = configuration.getJdbcTypeForNull();</span><br><span class="line">          &#125;</span><br><span class="line">          <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="comment">// 调用的是org.apache.ibatis.type.BaseTypeHandler.setParameter(PreparedStatement, int, T, JdbcType)方法</span></span><br><span class="line">            <span class="comment">// 参数下标从1开始</span></span><br><span class="line">            typeHandler.setParameter(ps, i + <span class="number">1</span>, value, jdbcType);</span><br><span class="line">          &#125; <span class="keyword">catch</span> (TypeException e) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> TypeException(<span class="string">"Could not set parameters for mapping: "</span> + parameterMapping + <span class="string">". Cause: "</span> + e, e);</span><br><span class="line">          &#125; <span class="keyword">catch</span> (SQLException e) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> TypeException(<span class="string">"Could not set parameters for mapping: "</span> + parameterMapping + <span class="string">". Cause: "</span> + e, e);</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<h3 id="结果处理器（ResultSetHandler）"><a href="#结果处理器（ResultSetHandler）" class="headerlink" title="结果处理器（ResultSetHandler）"></a>结果处理器（ResultSetHandler）</h3><p>比较简单，实际上就是对返回的结果进行映射。</p>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2017/09/14/Mybatis之SqlSession四大对象/" data-id="cj49du1q0000ll4uddzizck0c" class="article-share-link">Share</a>
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-    <article id="post-数据库设计的三大范式" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/lfhboke.github.io/2017/06/23/数据库设计的三大范式/" class="article-date">
-  <time datetime="2017-06-23T03:43:42.000Z" itemprop="datePublished">2017-06-23</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/lfhboke.github.io/2017/06/23/数据库设计的三大范式/">数据库设计的三大范式</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>什么是范式：简而言之就是，数据库设计对数据存储性能，还有开发人员对数据的操作都有莫大的关系。所以建立科学的，规范的数据库是需要满足一些规范来优化数据存储方式。</p>
-<h3 id="三大范式概念"><a href="#三大范式概念" class="headerlink" title="三大范式概念"></a>三大范式概念</h3><p>第一范式：当关系模式R的所有属性都不能在分解为更基本的数据单位时，称R是满足第一范式的，简记为1NF。满足第一范式是关系模式规范化的最低要求，否则，将有很多基本操作在这样的关系模式中实现不了。<br>第二范式：如果关系模式R满足第一范式，并且R的所有非主属性都完全依赖于R的每一个候选关键属性，称R满足第二范式，简记为2NF。<br>第三范式：设R是一个满足第一范式条件的关系模式，X是R的任意属性集，如果X非传递依赖于R的任意一个候选关键字，称R满足第三范式，3NF。</p>
-<h3 id="理解三大范式"><a href="#理解三大范式" class="headerlink" title="理解三大范式"></a>理解三大范式</h3><h4 id="第一范式"><a href="#第一范式" class="headerlink" title="第一范式"></a>第一范式</h4><ol>
-<li>每一列属性都是不可再分的属性值，确保每一列的原子性</li>
-<li>两列的属性相近或相似或一样，尽量合并属性一样的列，确保不产生冗余数据。</li>
-</ol>
-<table>
-<thead>
-<tr>
-<th></th>
-<th>Name</th>
-<th>Code</th>
-<th>DataType</th>
-<th>Length</th>
-<th>Precision</th>
-<th>P</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td> 1</td>
-<td>留言编号</td>
-<td>MsgId</td>
-<td>int</td>
-<td></td>
-<td></td>
-<td>true</td>
-</tr>
-<tr>
-<td> 2</td>
-<td>留言人姓名</td>
-<td>Name</td>
-<td>varchar(30)</td>
-<td>30</td>
-<td></td>
-<td>false</td>
-</tr>
-<tr>
-<td> 3</td>
-<td>地址</td>
-<td>Address</td>
-<td>varchar(80)</td>
-<td>80</td>
-<td></td>
-<td>false</td>
-</tr>
-</tbody>
-</table>
-<p> 如果需求直到那个省哪个市并按其分类，那么显然第一个表格不容易满足需求的，也不符合第一范式。</p>
-<h4 id="第二范式"><a href="#第二范式" class="headerlink" title="第二范式"></a>第二范式</h4><p> 每一行的数据只能与其中一列相关，即一行数据只做一件事。只要数据列中出现数据重复，就要把表拆分开来。</p>
-<h4 id="第三范式"><a href="#第三范式" class="headerlink" title="第三范式"></a>第三范式</h4><p> 数据不能存在传递关系，即每个属性都跟主键有直接关系而不是间接关系。</p>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2017/06/23/数据库设计的三大范式/" data-id="cj49du1ol000el4udq3uocysp" class="article-share-link">Share</a>
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/06/17/Java并发工具类之LongAdder/" data-id="cjyms8jrn0008dwudnljyqlt6" class="article-share-link">Share</a>
       
       
     </footer>
@@ -849,7 +810,7 @@
 
   <nav id="page-nav">
     
-    <span class="page-number current">1</span><a class="page-number" href="/lfhboke.github.io/page/2/">2</a><a class="page-number" href="/lfhboke.github.io/page/3/">3</a><a class="extend next" rel="next" href="/lfhboke.github.io/page/2/">Next &raquo;</a>
+    <span class="page-number current">1</span><a class="page-number" href="/lfhboke.github.io/page/2/">2</a><a class="page-number" href="/lfhboke.github.io/page/3/">3</a><span class="space">&hellip;</span><a class="page-number" href="/lfhboke.github.io/page/5/">5</a><a class="extend next" rel="next" href="/lfhboke.github.io/page/2/">Next &raquo;</a>
   </nav>
 
 </section>
@@ -868,7 +829,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Archives</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/06/">June 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/05/">May 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/03/">March 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2018/10/">October 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/04/">April 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/09/">September 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/07/">July 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/06/">June 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/01/">January 2016</a></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/07/">July 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/06/">June 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/05/">May 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/03/">March 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2018/10/">October 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/07/">July 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/04/">April 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/09/">September 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/07/">July 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/06/">June 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/01/">January 2016</a></li></ul>
     </div>
   </div>
 
@@ -881,23 +842,23 @@
       <ul>
         
           <li>
-            <a href="/lfhboke.github.io/2019/06/20/Collections解读/">Collections解读</a>
+            <a href="/lfhboke.github.io/2019/07/27/netty入门应用/">netty入门应用</a>
           </li>
         
           <li>
-            <a href="/lfhboke.github.io/2019/06/18/Java并发之AQS详解/">Java并发之AQS详解</a>
+            <a href="/lfhboke.github.io/2019/07/21/netty开篇/">netty开篇</a>
           </li>
         
           <li>
-            <a href="/lfhboke.github.io/2019/06/17/Java并发工具类之LongAdder/">Java并发工具类之LongAdder</a>
+            <a href="/lfhboke.github.io/2019/07/14/web-xml配置文件详解/">web.xml配置文件详解</a>
           </li>
         
           <li>
-            <a href="/lfhboke.github.io/2019/05/22/redis之LRU算法/">redis之LRU算法</a>
+            <a href="/lfhboke.github.io/2019/07/14/spring过滤器/">spring过滤器</a>
           </li>
         
           <li>
-            <a href="/lfhboke.github.io/2019/05/22/java8新特性/">java8新特性</a>
+            <a href="/lfhboke.github.io/2019/07/14/spring拦截器HandlerInterceptor/">spring拦截器HandlerInterceptor</a>
           </li>
         
       </ul>
@@ -912,7 +873,7 @@
   
   <div class="outer">
     <div id="footer-info" class="inner">
-      &copy; 2017 lfhu<br>
+      &copy; 2019 lfhu<br>
       Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
     </div>
   </div>

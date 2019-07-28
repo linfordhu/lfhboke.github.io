@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="utf-8">
+  
+
+  
+  <title>spring拦截器HandlerInterceptor | lfh&#39;s bokes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="简介拦截器是基于web框架的调用，因此可以使用spring的依赖注入（DI）进行一些业务操作。在springMVC中就是依赖于springMVC框架。在实现上基于Java的反射机制，属于面向切面编程（AOP）的一种运用。 主要工作场景拦截器可以获取IOC容器中的各个bean，而过滤器就不行，所以在拦截器里注入一个service，可以调用业务逻辑。 拦截器只能对controller请求进行拦截，对其">
+<meta property="og:type" content="article">
+<meta property="og:title" content="spring拦截器HandlerInterceptor">
+<meta property="og:url" content="https://linfordhu.github.io/lfhboke.github.io/2019/07/14/spring拦截器HandlerInterceptor/index.html">
+<meta property="og:site_name" content="lfh&#39;s bokes">
+<meta property="og:description" content="简介拦截器是基于web框架的调用，因此可以使用spring的依赖注入（DI）进行一些业务操作。在springMVC中就是依赖于springMVC框架。在实现上基于Java的反射机制，属于面向切面编程（AOP）的一种运用。 主要工作场景拦截器可以获取IOC容器中的各个bean，而过滤器就不行，所以在拦截器里注入一个service，可以调用业务逻辑。 拦截器只能对controller请求进行拦截，对其">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2019-07-14T02:57:08.932Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="spring拦截器HandlerInterceptor">
+<meta name="twitter:description" content="简介拦截器是基于web框架的调用，因此可以使用spring的依赖注入（DI）进行一些业务操作。在springMVC中就是依赖于springMVC框架。在实现上基于Java的反射机制，属于面向切面编程（AOP）的一种运用。 主要工作场景拦截器可以获取IOC容器中的各个bean，而过滤器就不行，所以在拦截器里注入一个service，可以调用业务逻辑。 拦截器只能对controller请求进行拦截，对其">
+  
+    <link rel="alternate" href="/lfhboke.github.io/atom.xml" title="lfh&#39;s bokes" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link rel="stylesheet" href="/lfhboke.github.io/css/style.css">
+</head>
+</html>
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/lfhboke.github.io/" id="logo">lfh&#39;s bokes</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/">Home</a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/lfhboke.github.io/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://linfordhu.github.io/lfhboke.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-spring拦截器HandlerInterceptor" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2019/07/14/spring拦截器HandlerInterceptor/" class="article-date">
+  <time datetime="2019-07-14T02:25:45.000Z" itemprop="datePublished">2019-07-14</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      spring拦截器HandlerInterceptor
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h4 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h4><p>拦截器是基于web框架的调用，因此可以使用spring的依赖注入（DI）进行一些业务操作。在springMVC中就是依赖于springMVC框架。在实现上基于Java的反射机制，属于面向切面编程（AOP）的一种运用。</p>
+<h4 id="主要工作场景"><a href="#主要工作场景" class="headerlink" title="主要工作场景"></a>主要工作场景</h4><p>拦截器可以获取IOC容器中的各个bean，而过滤器就不行，所以在拦截器里注入一个service，可以调用业务逻辑。</p>
+<font color="red">拦截器只能对controller请求进行拦截，对其他的一些比如直接访问静态资源的请求则没办法进行拦截处理。</font>
+
+<h4 id="WebMvcConfigurerAdapter比较常用的重写接口"><a href="#WebMvcConfigurerAdapter比较常用的重写接口" class="headerlink" title="WebMvcConfigurerAdapter比较常用的重写接口"></a>WebMvcConfigurerAdapter比较常用的重写接口</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** 添加类型转换器和格式化器 */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addFormatters</span><span class="params">(FormatterRegistry registry)</span></span></span><br><span class="line"><span class="function"><span class="comment">/** 配置消息转换器 */</span></span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">configureMessageConverters</span><span class="params">(List&lt;HttpMessageConverter&lt;?&gt;&gt; converters)</span></span></span><br><span class="line"><span class="function"><span class="comment">/** 解决跨域问题 */</span></span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addCorsMappings</span><span class="params">(CorsRegistry registry)</span></span>;</span><br><span class="line"><span class="comment">/** 添加拦截器 */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">addInterceptors</span><span class="params">(InterceptorRegistry registry)</span></span>;</span><br><span class="line"><span class="comment">/** 这里配置视图解析器 */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">configureVeiwResolvers</span><span class="params">(ViewResolverRegistry registry)</span></span>;</span><br><span class="line"><span class="comment">/** 配置内容裁决的一些选项 */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">configureContentNegotiation</span><span class="params">(ContentNegotiationConfigurer configurer)</span></span>;</span><br><span class="line"><span class="comment">/** 视图跳转控制器 */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">addViewVontrollers</span><span class="params">(ViewControllerRegistry registry)</span></span>;</span><br><span class="line"><span class="comment">/** 静态资源处理 */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">addResourceHandlers</span><span class="params">(ResourceHandlerRegistry registry)</span></span>;</span><br><span class="line"><span class="comment">/** 默认静态资源处理器 */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">configureDefaultServletHandling</span><span class="params">(DefaultServletHandlerConfigurer configurer)</span></span>;</span><br></pre></td></tr></table></figure>
+<p>#添加拦截器<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addInterceptors</span><span class="params">(InterceptorRegistry registry)</span> </span>&#123;</span><br><span class="line">	registry.addInterceptor(<span class="keyword">new</span> ReqInterceptor()).addPathPatterns(<span class="string">"/**"</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h4 id="实现自定义拦截器"><a href="#实现自定义拦截器" class="headerlink" title="实现自定义拦截器"></a>实现自定义拦截器</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ReqInterceptor</span> <span class="keyword">extends</span> <span class="title">HandlerInterceptorAdapter</span> </span>&#123;</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">preHandle</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    	System.out.println(<span class="string">"拦截器--preHandle"</span>)；</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.preHandle(request, response, handler);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">postHandle</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    	System.out.println(<span class="string">"拦截器--postHandle"</span>);</span><br><span class="line">        <span class="keyword">super</span>.postHandle(request, response, handler, modelAndView);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">afterCompletion</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex)</span> <span class="keyword">throws</span> Excepion </span>&#123;</span><br><span class="line">    	System.out.println(<span class="string">"拦截器--afterCompletion"</span>);</span><br><span class="line">        <span class="keyword">super</span>.afterCompletion(request, response, handler, ex);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">afterConcurrentHandlingStarted</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler)</span> </span>&#123;</span><br><span class="line">    	System.out.println(<span class="string">"拦截器--afterConcurrentHandlingStarted"</span>);</span><br><span class="line">        <span class="keyword">super</span>.afterConcurrentHandlingStarted(request, response, handler);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/07/14/spring拦截器HandlerInterceptor/" data-id="cjyms8jte000mdwud5da3cac7" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/lfhboke.github.io/2019/07/14/spring过滤器/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          spring过滤器
+        
+      </div>
+    </a>
+  
+  
+    <a href="/lfhboke.github.io/2019/07/13/elasticsearch全文搜索探究（多词查询）/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">elasticsearch全文搜索探究（多词查询）</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/07/">July 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/06/">June 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/05/">May 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/03/">March 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2018/10/">October 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/07/">July 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/04/">April 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/09/">September 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/07/">July 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/06/">June 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/01/">January 2016</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/27/netty入门应用/">netty入门应用</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/21/netty开篇/">netty开篇</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/14/web-xml配置文件详解/">web.xml配置文件详解</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/14/spring过滤器/">spring过滤器</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/14/spring拦截器HandlerInterceptor/">spring拦截器HandlerInterceptor</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2019 lfhu<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/lfhboke.github.io/" class="mobile-nav-link">Home</a>
+  
+    <a href="/lfhboke.github.io/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/lfhboke.github.io/fancybox/jquery.fancybox.css">
+  <script src="/lfhboke.github.io/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/lfhboke.github.io/js/script.js"></script>
+
+
+
+  </div>
+</body>
+</html>

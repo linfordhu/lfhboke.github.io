@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="utf-8">
+  
+
+  
+  <title>elasticsearch全文搜索探究（匹配查询） | lfh&#39;s bokes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="匹配查询匹配查询match是个核心查询。无论需要查询什么字段，match查询都应该会是首选的查询方式。它是一个高级全文查询，这表示它既能处理全文字段，又能处理精确字段。 这就是说，match查询主要的应用场景就是进行全文搜索。 索引一些数据首先使用bulk API创建一些新的文档和索引：1234567891011DELETE /my_indexPUT /my_index&amp;#123;&amp;quot;se">
+<meta property="og:type" content="article">
+<meta property="og:title" content="elasticsearch全文搜索探究（匹配查询）">
+<meta property="og:url" content="https://linfordhu.github.io/lfhboke.github.io/2019/07/13/elasticsearch全文搜索探究（匹配查询）/index.html">
+<meta property="og:site_name" content="lfh&#39;s bokes">
+<meta property="og:description" content="匹配查询匹配查询match是个核心查询。无论需要查询什么字段，match查询都应该会是首选的查询方式。它是一个高级全文查询，这表示它既能处理全文字段，又能处理精确字段。 这就是说，match查询主要的应用场景就是进行全文搜索。 索引一些数据首先使用bulk API创建一些新的文档和索引：1234567891011DELETE /my_indexPUT /my_index&amp;#123;&amp;quot;se">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2019-07-13T07:40:35.599Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="elasticsearch全文搜索探究（匹配查询）">
+<meta name="twitter:description" content="匹配查询匹配查询match是个核心查询。无论需要查询什么字段，match查询都应该会是首选的查询方式。它是一个高级全文查询，这表示它既能处理全文字段，又能处理精确字段。 这就是说，match查询主要的应用场景就是进行全文搜索。 索引一些数据首先使用bulk API创建一些新的文档和索引：1234567891011DELETE /my_indexPUT /my_index&amp;#123;&amp;quot;se">
+  
+    <link rel="alternate" href="/lfhboke.github.io/atom.xml" title="lfh&#39;s bokes" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link rel="stylesheet" href="/lfhboke.github.io/css/style.css">
+</head>
+</html>
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/lfhboke.github.io/" id="logo">lfh&#39;s bokes</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/">Home</a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/lfhboke.github.io/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://linfordhu.github.io/lfhboke.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-elasticsearch全文搜索探究（匹配查询）" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2019/07/13/elasticsearch全文搜索探究（匹配查询）/" class="article-date">
+  <time datetime="2019-07-13T07:14:47.000Z" itemprop="datePublished">2019-07-13</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      elasticsearch全文搜索探究（匹配查询）
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h3 id="匹配查询"><a href="#匹配查询" class="headerlink" title="匹配查询"></a>匹配查询</h3><p>匹配查询match是个核心查询。无论需要查询什么字段，match查询都应该会是首选的查询方式。它是一个高级全文查询，这表示它既能处理全文字段，又能处理精确字段。</p>
+<p>这就是说，match查询主要的应用场景就是进行全文搜索。</p>
+<h4 id="索引一些数据"><a href="#索引一些数据" class="headerlink" title="索引一些数据"></a>索引一些数据</h4><p>首先使用bulk API创建一些新的文档和索引：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">DELETE /my_index</span><br><span class="line">PUT /my_index</span><br><span class="line">&#123;&quot;settings&quot;:&#123;&quot;number_of_shards&quot;:1&#125;&#125;</span><br><span class="line"></span><br><span class="line">POST /my_index/my_type/_bulk</span><br><span class="line">&#123;&quot;index&quot;:&#123;&quot;_id&quot;:1&#125;&#125;</span><br><span class="line">&#123;&quot;title&quot;:&quot;The quick brown fox&quot;&#125;</span><br><span class="line">&#123;&quot;index&quot;:&#123;&quot;_id&quot;:2&#125;&#125;</span><br><span class="line">&#123;&quot;title&quot;:&quot;The quick brown fox&quot;&#125;</span><br><span class="line">&#123;&quot;index&quot;:&#123;&quot;_id&quot;:3&#125;&#125;</span><br><span class="line">&#123;&quot;title&quot;:&quot;The quick brown fox&quot;&#125;</span><br></pre></td></tr></table></figure></p>
+<h4 id="单个词查询"><a href="#单个词查询" class="headerlink" title="单个词查询"></a>单个词查询</h4><p>我们用第一个示例来解释使用match查询搜索全文字段中的单个词：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">GET /my_index/my_type/_search</span><br><span class="line">&#123;</span><br><span class="line">	&quot;query&quot;:&#123;</span><br><span class="line">    	&quot;match&quot;:&#123;&quot;title&quot;:&quot;QUICK!&quot;&#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>elasticsearch执行上面这个match查询的步骤是：</p>
+<ol>
+<li>检查字段类型。</li>
+</ol>
+<p>标题title字段是一个string类型（analyzed）已分析的全文字段，这意味着查询字符串本身也应该被分析。</p>
+<ol start="2">
+<li>分析查询字符串。</li>
+</ol>
+<p>将查询的字符串QUICK！传入标准分析器，输出的结果是单个项quick。因为只有一个单词项，所以match查询执行的是单个底层term查询。</p>
+<ol start="3">
+<li>查找匹配文档。</li>
+</ol>
+<p>用term查询在倒排索引中查找quick然后获取一组包含该项的文档。</p>
+<ol start="4">
+<li>为每个文档评分。</li>
+</ol>
+<p>用term查询计算每个文档相关度评分_score，这是种将词频和反向文档频率，以及字段的长度相结合的计算方式。</p>
+<p>这个过程给我们以下结果：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">&quot;hits&quot;:[</span><br><span class="line">&#123;</span><br><span class="line">	&quot;_id&quot;:&quot;1&quot;,</span><br><span class="line">    &quot;_score&quot;:0.5,</span><br><span class="line">    &quot;_source&quot;:&#123;</span><br><span class="line">    	&quot;title&quot;:&quot;The quick brown fox&quot;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;,</span><br><span class="line">&#123;</span><br><span class="line">	&quot;_id&quot;:&quot;2&quot;,</span><br><span class="line">    &quot;_score&quot;:0.44194174,</span><br><span class="line">    &quot;_source&quot;:&#123;</span><br><span class="line">    	&quot;title&quot;:&quot;The quick brown fox&quot;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">]</span><br></pre></td></tr></table></figure></p>
+<ol>
+<li>文档1最相关，因为它的title字段更短，即quick占据内容的一大部分。</li>
+<li>文档3比文档2更具有相关性，因为在文档3中quick出现两次。</li>
+</ol>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/07/13/elasticsearch全文搜索探究（匹配查询）/" data-id="cjyms8jsg000fdwud2i4osqkl" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/lfhboke.github.io/2019/07/13/elasticsearch全文搜索探究（多词查询）/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          elasticsearch全文搜索探究（多词查询）
+        
+      </div>
+    </a>
+  
+  
+    <a href="/lfhboke.github.io/2019/06/20/Collections解读/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">Collections解读</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/07/">July 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/06/">June 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/05/">May 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/03/">March 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2018/10/">October 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/07/">July 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/04/">April 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/09/">September 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/07/">July 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/06/">June 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/01/">January 2016</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/27/netty入门应用/">netty入门应用</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/21/netty开篇/">netty开篇</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/14/web-xml配置文件详解/">web.xml配置文件详解</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/14/spring过滤器/">spring过滤器</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/14/spring拦截器HandlerInterceptor/">spring拦截器HandlerInterceptor</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2019 lfhu<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/lfhboke.github.io/" class="mobile-nav-link">Home</a>
+  
+    <a href="/lfhboke.github.io/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/lfhboke.github.io/fancybox/jquery.fancybox.css">
+  <script src="/lfhboke.github.io/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/lfhboke.github.io/js/script.js"></script>
+
+
+
+  </div>
+</body>
+</html>

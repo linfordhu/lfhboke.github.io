@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="utf-8">
+  
+
+  
+  <title>web.xml配置文件详解 | lfh&#39;s bokes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="一、web.xml是什么？首先web.xml是java web项目的一个重要的配置文件，但是web.xml文件并不是Java Web工程必须的。 web.xml文件是用来配置：欢迎页、servlet、filer等的。当你的web工程没用到这些时，可以不需要使用web.xml文件来配置你的web工程。 web.xml能做的事情：其实，web.xml的模式（Schema）文件中定义了多少种标签元素，w">
+<meta property="og:type" content="article">
+<meta property="og:title" content="web.xml配置文件详解">
+<meta property="og:url" content="https://linfordhu.github.io/lfhboke.github.io/2019/07/14/web-xml配置文件详解/index.html">
+<meta property="og:site_name" content="lfh&#39;s bokes">
+<meta property="og:description" content="一、web.xml是什么？首先web.xml是java web项目的一个重要的配置文件，但是web.xml文件并不是Java Web工程必须的。 web.xml文件是用来配置：欢迎页、servlet、filer等的。当你的web工程没用到这些时，可以不需要使用web.xml文件来配置你的web工程。 web.xml能做的事情：其实，web.xml的模式（Schema）文件中定义了多少种标签元素，w">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2019-07-14T14:41:37.181Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="web.xml配置文件详解">
+<meta name="twitter:description" content="一、web.xml是什么？首先web.xml是java web项目的一个重要的配置文件，但是web.xml文件并不是Java Web工程必须的。 web.xml文件是用来配置：欢迎页、servlet、filer等的。当你的web工程没用到这些时，可以不需要使用web.xml文件来配置你的web工程。 web.xml能做的事情：其实，web.xml的模式（Schema）文件中定义了多少种标签元素，w">
+  
+    <link rel="alternate" href="/lfhboke.github.io/atom.xml" title="lfh&#39;s bokes" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link rel="stylesheet" href="/lfhboke.github.io/css/style.css">
+</head>
+</html>
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/lfhboke.github.io/" id="logo">lfh&#39;s bokes</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/">Home</a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/lfhboke.github.io/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://linfordhu.github.io/lfhboke.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-web-xml配置文件详解" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2019/07/14/web-xml配置文件详解/" class="article-date">
+  <time datetime="2019-07-14T07:36:59.000Z" itemprop="datePublished">2019-07-14</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      web.xml配置文件详解
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h4 id="一、web-xml是什么？"><a href="#一、web-xml是什么？" class="headerlink" title="一、web.xml是什么？"></a>一、web.xml是什么？</h4><p>首先web.xml是java web项目的一个重要的配置文件，但是web.xml文件并不是Java Web工程必须的。</p>
+<p>web.xml文件是用来配置：欢迎页、servlet、filer等的。当你的web工程没用到这些时，可以不需要使用web.xml文件来配置你的web工程。</p>
+<h5 id="web-xml能做的事情："><a href="#web-xml能做的事情：" class="headerlink" title="web.xml能做的事情："></a>web.xml能做的事情：</h5><p>其实，web.xml的模式（Schema）文件中定义了多少种标签元素，web.xml中就可以出现它的模式文件所定义的标签元素，它就能拥有定义出来的那些功能。</p>
+<p>web.xml的模式文件是由Sun公司定义的，每个web.xml文件的根元素<web-app>中，都必须标明这个web.xml使用的是哪个模式文件。如：</web-app></p>
+<h4 id="二、web-xml详解："><a href="#二、web-xml详解：" class="headerlink" title="二、web.xml详解："></a>二、web.xml详解：</h4><h5 id="1-web-xml加载过程"><a href="#1-web-xml加载过程" class="headerlink" title="1.web.xml加载过程"></a>1.web.xml加载过程</h5><p>首先简单讲一下，web.xml的加载过程。当启动一个WEB项目时，首先会读取项目web.xml<br>配置文件里的配置，当这一步没有出错并且完成之后，项目才能正常的被启动起来。</p>
+<ol>
+<li>启动WEB项目的时候，容器首先会去它的配置文件web.xml读取两个节点：<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">2. 紧接着，容器创建一个ServletContext(application)，这个WEB项目所有部分都将共享这个上下文。</span><br><span class="line">3. 容器以```&lt;context-param&gt;&lt;/context-param&gt;```的name作为键，value作为值，将其转化为键值对，存入ServletContext。</span><br><span class="line">4. 容器创建```&lt;listener&gt;&lt;/listener&gt;```中的类实例，根据配置的class类路径```&lt;listener-class&gt;```来创建监听，在监听中会有contextInitialized(ServletContextEvent args)初始方法，启动Web应用时，系统调用Listener的该方法，在这个方法照中获得。</span><br><span class="line">5. 举例：你可能在项目启动之前就打开数据库，那么这里就可以在```&lt;context-param&gt;```中设置数据库的连接方式（驱动、url、user、password），在监听类中初始化数据库的连接。这个监听是自己写的一个类，除了初始化方法，它还有销毁方法，用于关闭应用前释放资源。比如：说数据库连接的关闭，此时，调用contextDestroyed(ServletContextEvent args)，关闭Web应用时，系统调用Listener的该方法。</span><br><span class="line">6. 接着，容器会读取```&lt;filter&gt;&lt;/filter&gt;```，根据指定的类路径来实例化过滤器。</span><br><span class="line">7. 以上都是在WEB项目还没有完全启动起来的时候就已经完成了的工作。如果系统中有Servlet，则Servlet是在第一次发起请求的时候被实例化的，而且一般不会被容器销毁，它可以服务于多个用户的请求。所以，Servlet的初始化都要比上面提到的那几个要迟。</span><br><span class="line">8. 总的来说，web.xml的加载顺序是：```&lt;context-param&gt;-&gt;&lt;listener&gt;-&gt;&lt;filer&gt;-&gt;&lt;servlet&gt;```。其中，如果web.xml中出现了相同的元素，则按照在配置文件中出现的先后顺序来加载。</span><br><span class="line">9. 对于某类元素而言，与它们出现的顺序是有关的。以```&lt;filter&gt;```为例，web.xml中当然可以定义多个filter，与filter相关的一个元素是```&lt;filter-mapping&gt;```，注意，对于拥有相同```&lt;filter-name&gt;```的filter和filter-mapping元素而言，filter-mapping必须出现在filter之后，否则当解析到filter-mapping时，它所对应的filter-name还未定义。web容器启动初始化每个filter时，按照filter出现的顺序来初始化的，当请求资源匹配多个filter-mapping时，filter拦截资源是按照filter-mapping元素出现的顺序来依次调用doFilter()方法的。servlet同filter类似。</span><br><span class="line">##### 2.web.xml标签详解</span><br><span class="line">###### 1.xml文档有效性检查</span><br><span class="line">1. web-app定义该文档（部署描述符，不是DTD文件）的根元素</span><br><span class="line">2. PUBLIC意味着DTD文件可以被公开使用</span><br><span class="line">3. -//Sun Microsysterms，Inc.//DTD Web Application 2.3//EN“意味着DTD由SunMicrosystems，Inc维护。”</span><br><span class="line">4. URL&quot;http://java.sun.com/dtd/web-app 2 3.dtd&quot;表示D文件的位置。</span><br><span class="line">##### 2.```&lt;web-app&gt;</span><br></pre></td></tr></table></figure></li>
+</ol>
+<p>部署描述符的根元素。</p>
+<p>这个元素含有23个子元素，而且子元素都是可选的。问号（？）表示子元素是可选的，而且只能出现一次。星号（<code>*</code>）表示子元素可在部署描述符中出现零次或多次。有些子元素还可以有自己的子元素。web.xml文件中web-app元素声明的是下面每个子元素的声明。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2019/07/14/web-xml配置文件详解/" data-id="cjyms8jtj000odwudfsymug9i" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/lfhboke.github.io/2019/07/21/netty开篇/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          netty开篇
+        
+      </div>
+    </a>
+  
+  
+    <a href="/lfhboke.github.io/2019/07/14/spring过滤器/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">spring过滤器</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/07/">July 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/06/">June 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/05/">May 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/03/">March 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2018/10/">October 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/07/">July 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/04/">April 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/09/">September 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/07/">July 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/06/">June 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/01/">January 2016</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/27/netty入门应用/">netty入门应用</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/21/netty开篇/">netty开篇</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/14/web-xml配置文件详解/">web.xml配置文件详解</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/14/spring过滤器/">spring过滤器</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/14/spring拦截器HandlerInterceptor/">spring拦截器HandlerInterceptor</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2019 lfhu<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/lfhboke.github.io/" class="mobile-nav-link">Home</a>
+  
+    <a href="/lfhboke.github.io/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/lfhboke.github.io/fancybox/jquery.fancybox.css">
+  <script src="/lfhboke.github.io/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/lfhboke.github.io/js/script.js"></script>
+
+
+
+  </div>
+</body>
+</html>

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="utf-8">
+  
+
+  
+  <title>Spring源码解析(springMVC初始化流程) | lfh&#39;s bokes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="spring mvc提供的控制器类型handlerMappings是如何被初始化的，来引出springMVC初始化。那么先看HandlerMappings初始化源码可得：123456789101112131415private void initHandlerMappings(ApplicationContext context) &amp;#123;	this.handlerMappings = nul">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Spring源码解析(springMVC初始化流程)">
+<meta property="og:url" content="https://linfordhu.github.io/lfhboke.github.io/2017/06/29/Spring源码解析—/index.html">
+<meta property="og:site_name" content="lfh&#39;s bokes">
+<meta property="og:description" content="spring mvc提供的控制器类型handlerMappings是如何被初始化的，来引出springMVC初始化。那么先看HandlerMappings初始化源码可得：123456789101112131415private void initHandlerMappings(ApplicationContext context) &amp;#123;	this.handlerMappings = nul">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/inithandler.PNG">
+<meta property="og:updated_time" content="2017-07-01T15:19:53.045Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Spring源码解析(springMVC初始化流程)">
+<meta name="twitter:description" content="spring mvc提供的控制器类型handlerMappings是如何被初始化的，来引出springMVC初始化。那么先看HandlerMappings初始化源码可得：123456789101112131415private void initHandlerMappings(ApplicationContext context) &amp;#123;	this.handlerMappings = nul">
+<meta name="twitter:image" content="https://linfordhu.github.io/lfhboke.github.io/css/images/inithandler.PNG">
+  
+    <link rel="alternate" href="/lfhboke.github.io/atom.xml" title="lfh&#39;s bokes" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link rel="stylesheet" href="/lfhboke.github.io/css/style.css">
+</head>
+</html>
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/lfhboke.github.io/" id="logo">lfh&#39;s bokes</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/">Home</a>
+        
+          <a class="main-nav-link" href="/lfhboke.github.io/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/lfhboke.github.io/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://linfordhu.github.io/lfhboke.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-Spring源码解析—" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/lfhboke.github.io/2017/06/29/Spring源码解析—/" class="article-date">
+  <time datetime="2017-06-29T05:37:03.000Z" itemprop="datePublished">2017-06-29</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      Spring源码解析(springMVC初始化流程)
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>spring mvc提供的控制器类型handlerMappings是如何被初始化的，来引出springMVC初始化。那么先看HandlerMappings初始化源码可得：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">initHandlerMappings</span><span class="params">(ApplicationContext context)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">this</span>.handlerMappings = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">if</span>(<span class="keyword">this</span>.detectAllHandlerMappings) &#123;</span><br><span class="line">    	Map&lt;String, HandlerMapping&gt; matchingBeans = BeanFactoryUtils.beansOfTypeIncludingAncestors(context,HandlerMapping.class);</span><br><span class="line">        <span class="keyword">if</span>(!matchingBeans.isEmpty()) &#123;</span><br><span class="line">        	<span class="keyword">this</span>.handlerMappings = <span class="keyword">new</span> ArrayList(matchingBeans.values());</span><br><span class="line">            AnnotationAwareOrderComparator.sort(<span class="keyword">this</span>.handlerMappings);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    	<span class="keyword">try</span>&#123;</span><br><span class="line">        	HandlerMapping hm = (HandlerMapping) context.getBean(<span class="string">"handlerMapping"</span>, HandlerMapping.class);</span><br><span class="line">            <span class="keyword">this</span>.handlerMappings = Collections.singlertonList(hm);</span><br><span class="line">        &#125;<span class="keyword">catch</span>()&#123;&#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>其初始化是在DispatcherServlet类中的这个方法进行的，而这个初始化方法initHandlerMappings()又是什么时候执行的呢？在该类中发现，是在下面方法中执行初始化的，同时发现好多组建都是在这个方法中执行，比如另一个重要的对象控制适配器。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onRefresh</span><span class="params">(ApplicationContext context)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">this</span>.initStrategies(context);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initStrategies</span><span class="params">(ApplicationContext context)</span></span>&#123;</span><br><span class="line">	<span class="keyword">this</span>.initMultipartResolver(context);</span><br><span class="line">    <span class="keyword">this</span>.initLocaleResolver(context);</span><br><span class="line">    <span class="keyword">this</span>.initThemeResolver(context);</span><br><span class="line">    <span class="keyword">this</span>.initHandlerMappings(context);</span><br><span class="line">    <span class="keyword">this</span>.initHandlerAdapters(context);</span><br><span class="line">    <span class="keyword">this</span>.initHandlerExceptionResolvers(context);</span><br><span class="line">    <span class="keyword">this</span>.initRequestToViewNameTranslator(context);</span><br><span class="line">    <span class="keyword">this</span>.initViewResolvers(context);</span><br><span class="line">    <span class="keyword">this</span>.initFlashMapManager(context);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>那么归根结底，其springMVC的初始化是在onRefresh()这个方法中执行的。<br>因此下面首先通过时序图探索springMVC的初始化流程：<br><img src="/lfhboke.github.io/css/images/inithandler.PNG" alt="inithandler"><br>servlet初始化会调用init方法，换句话说就是springMVC进行初始化的时候首先会去执行HttpServletBean的init方法，下面看看HttpServletBean的源码：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">()</span> <span class="keyword">throws</span> ServletException </span>&#123;</span><br><span class="line">	PropertyValues pvs = <span class="keyword">new</span> HttpServletBean.ServletConfigPropertyValues(<span class="keyword">this</span>.getServletConfig(),<span class="keyword">this</span>.requiredProperties);</span><br><span class="line">    <span class="keyword">if</span>(!pvs.isEmpty()) &#123;</span><br><span class="line">    	<span class="keyword">try</span>&#123;</span><br><span class="line">        	BeanWrapper bw=PrpertyAccessorFactory.forBeanPropertyAccess(<span class="keyword">this</span>);</span><br><span class="line">            ResouceLoader resourceLoader=<span class="keyword">new</span> ServletContextResourceLoader(<span class="keyword">this</span>.getServletContext());</span><br><span class="line">            bw.registerCustomEditor(Resource.class, <span class="keyword">new</span> ReourceEditor(resourceLoader, <span class="keyword">this</span>.getEnvironment()));</span><br><span class="line">            <span class="keyword">this</span>.initBeanWrapper(bw);</span><br><span class="line">            bw.setPropertyValues(pvs,<span class="keyword">true</span>);</span><br><span class="line">        &#125;<span class="keyword">catch</span>()&#123;&#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">this</span>.initServletBean();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>上面这段代码主要是在获取你在web.xml在<init-param>中的属性。其中有一点值得注意，那就是initServletBean()这个方法是由子类FrameworkServlet实现，因此，接下来FramworkServlet会执行initServletBean这个方法，下面就继续看看initServletBean方法源码：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">initServletBean</span><span class="params">()</span> <span class="keyword">throws</span> ServletException </span>&#123;</span><br><span class="line">	<span class="keyword">this</span>.getServletContext();</span><br><span class="line">    <span class="keyword">long</span> startTime = System.currentTimeMillis();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></init-param></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://linfordhu.github.io/lfhboke.github.io/2017/06/29/Spring源码解析—/" data-id="cjyms8jsa000ddwuduj9yjvds" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/lfhboke.github.io/2017/07/13/elasticsearch全文搜索探究（基于词项与基于全文）/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          elasticsearch全文搜索探究（基于词项与基于全文）
+        
+      </div>
+    </a>
+  
+  
+    <a href="/lfhboke.github.io/2017/06/27/springMvc初探/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">springMVC核心代码（DispatchServlet工作原理）</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/07/">July 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/06/">June 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/05/">May 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2019/03/">March 2019</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2018/10/">October 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/07/">July 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2017/04/">April 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/09/">September 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/07/">July 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/06/">June 2016</a></li><li class="archive-list-item"><a class="archive-list-link" href="/lfhboke.github.io/archives/2016/01/">January 2016</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/27/netty入门应用/">netty入门应用</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/21/netty开篇/">netty开篇</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/14/web-xml配置文件详解/">web.xml配置文件详解</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/14/spring过滤器/">spring过滤器</a>
+          </li>
+        
+          <li>
+            <a href="/lfhboke.github.io/2019/07/14/spring拦截器HandlerInterceptor/">spring拦截器HandlerInterceptor</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2019 lfhu<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/lfhboke.github.io/" class="mobile-nav-link">Home</a>
+  
+    <a href="/lfhboke.github.io/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/lfhboke.github.io/fancybox/jquery.fancybox.css">
+  <script src="/lfhboke.github.io/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/lfhboke.github.io/js/script.js"></script>
+
+
+
+  </div>
+</body>
+</html>
